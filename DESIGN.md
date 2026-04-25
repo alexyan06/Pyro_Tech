@@ -1,5 +1,5 @@
 ---
-name: Ember
+name: PyroTech
 description: Multi-agent AI wildfire incident command simulation
 colors:
   background: "oklch(6% 0.008 24)"
@@ -88,7 +88,7 @@ components:
     padding: "4px 14px"
 ---
 
-# Design System: Ember
+# Design System: PyroTech
 
 ## 1. Overview
 
@@ -114,7 +114,7 @@ This system rejects: strategy game UI chrome, generic BI dashboard layouts (Graf
 A near-monochrome field of warm darks, with six semantic signal colors and one brand anchor.
 
 ### Primary (Brand)
-- **Incident Amber** (`oklch(68% 0.18 45)`): The sole brand color. Used for the EMBER logotype and the 2px top border on the dashboard header. Doubles as the `--accent-orange` status signal for congestion and route closures. When it appears outside these two roles, it reads as a system alert — that reading is correct.
+- **Incident Amber** (`oklch(68% 0.18 45)`): The sole brand color. Used for the PYROTECH logotype and the 2px top border on the dashboard header. Doubles as the `--accent-orange` status signal for congestion and route closures. When it appears outside these two roles, it reads as a system alert — that reading is correct.
 
 ### Neutral (Surfaces and Text)
 - **Incident Black** (`oklch(6% 0.008 24)`): The page background. The darkest surface. Never pure black — trace warmth at hue 24 keeps it from reading as void.
@@ -148,7 +148,7 @@ A near-monochrome field of warm darks, with six semantic signal colors and one b
 **Character:** Barlow Condensed dominates. Its compressed, military-grade letterforms pack maximum information into minimal vertical and horizontal space. Barlow body appears only in agent transmissions — the one surface where legible prose matters. Geist Mono anchors all numeric data with tabular precision.
 
 ### Hierarchy
-- **Headline** (Barlow Condensed, 800, 1.2rem, lh 1, tracking 0.1em, uppercase): The EMBER logotype in the dashboard header. Used nowhere else.
+- **Headline** (Barlow Condensed, 800, 1.2rem, lh 1, tracking 0.1em, uppercase): The PYROTECH logotype in the dashboard header. Used nowhere else.
 - **Title** (Barlow Condensed, 700, 0.65rem, lh 1, tracking 0.18em, uppercase): Section panel headers ("Agent Transmissions", "ICS Unified Command"). The primary UI labeling register.
 - **Body** (Barlow, 400, 0.84rem, lh 1.65): Agent transmission prose. The only place running text appears. Max line length governed by the 40% feed panel width.
 - **Label** (Barlow Condensed, 400–600, 0.56–0.72rem, tracking 0.1–0.18em, uppercase): MetricItem labels, callsign tags, button text, hint text, status strings. The workhorse.
@@ -218,7 +218,7 @@ The 44px application header.
 - **Top stripe:** 2px solid `--accent` (Incident Amber). The only structural decoration in the entire UI.
 - **Bottom border:** 1px `--border`.
 - **Background:** `--panel-bg`.
-- Contains: back navigation (ghost button), EMBER logotype (condensed, 800, 1.2rem, amber), incident role label, simulation clock, connection status dot + label.
+- Contains: back navigation (ghost button), PYROTECH logotype (condensed, 800, 1.2rem, amber), incident role label, simulation clock, connection status dot + label.
 
 ### Status Dot
 
@@ -259,4 +259,4 @@ An absolute-positioned overlay on the map when simulation is running.
 - **Don't** use gradient text (`background-clip: text` with a gradient). All text is a single solid color.
 - **Don't** use glassmorphism or semi-transparent blur panels decoratively. This is an operational instrument, not a glass surface.
 - **Don't** show the Mapbox attribution logo (`mapboxgl-ctrl-logo`, `mapboxgl-ctrl-attrib` are suppressed in globals.css — keep them suppressed). The map is the product; credits are noise during command.
-- **Don't** add font sizes larger than 1.2rem to UI chrome. The headline scale is reserved for the EMBER logotype alone. If something looks big, it probably shouldn't.
+- **Don't** add font sizes larger than 1.2rem to UI chrome. The headline scale is reserved for the PYROTECH logotype alone. If something looks big, it probably shouldn't.

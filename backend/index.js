@@ -122,9 +122,9 @@ async function start() {
   await initRedis();
 
   server.listen(PORT, () => {
-    console.log(`[Ember] Server running on port ${PORT}`);
-    console.log(`[Ember] WebSocket ready on ws://localhost:${PORT}`);
-    console.log(`[Ember] Health check: http://localhost:${PORT}/api/health`);
+    console.log(`[PyroTech] Server running on port ${PORT}`);
+    console.log(`[PyroTech] WebSocket ready on ws://localhost:${PORT}`);
+    console.log(`[PyroTech] Health check: http://localhost:${PORT}/api/health`);
   });
 }
 
