@@ -10,7 +10,7 @@ import PlaybookViewer from '@/components/PlaybookViewer';
 import ReplayScrubber from '@/components/ReplayScrubber';
 import BranchPanel from '@/components/BranchPanel';
 import { MapNotifications, type MapNotification } from '@/components/MapNotifications';
-import LoadingScreen from '@/components/LoadingScreen';
+import { useLoading } from '@/lib/loadingState';
 import { useSimulation } from '@/hooks/useSimulation';
 import { useMapState } from '@/hooks/useMapState';
 import { useAgentAudio } from '@/hooks/useAgentAudio';
@@ -102,9 +102,8 @@ export default function Home() {
   const [storedScenario, setStoredScenario] = useState<StoredScenario | null>(null);
   const [notifications, setNotifications] = useState<MapNotification[]>([]);
   const [mapWidth, setMapWidth] = useState(60);
-  const [simLoading, setSimLoading] = useState(() =>
-    typeof window !== 'undefined' && sessionStorage.getItem('pyrotech_sim_loading') === '1'
-  );
+  const { setPhase } = useLoading();
+  const hasMarkedReady = useRef(false);
   const isDraggingRef = useRef(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
 
@@ -285,11 +284,13 @@ export default function Home() {
     [dispatch, addNotification],
   );
 
-  const handleStateSnapshot = useCallback(
+  const handleSimulationReady = useCallback(
     () => {
-      setSimLoading(false);
+      if (hasMarkedReady.current) return;
+      hasMarkedReady.current = true;
+      setPhase('done');
     },
-    [],
+    [setPhase],
   );
 
   const handleParticleUpdate = useCallback(
@@ -324,7 +325,7 @@ export default function Home() {
     requestPlaybook,
     startBranch,
     clearBranch,
-  } = useSimulation({ onMapEvent: handleMapEvent, onAgentAudio: handleAudio, onStateSnapshot: handleStateSnapshot, onParticleUpdate: handleParticleUpdate });
+  } = useSimulation({ onMapEvent: handleMapEvent, onAgentAudio: handleAudio, onSimulationReady: handleSimulationReady, onParticleUpdate: handleParticleUpdate });
 
   const { isReplaying, replayTick, replaySnapshot, setReplayTick, exitReplay, minTick, maxTick } =
     useReplay(snapshots);
@@ -381,10 +382,10 @@ export default function Home() {
 
   // On mount: load scenario from sessionStorage, redirect to setup if missing
   useEffect(() => {
-    sessionStorage.removeItem('pyrotech_sim_loading');
     try {
       const raw = sessionStorage.getItem('pyrotech_scenario');
       if (!raw) {
+        setPhase('idle');
         router.push('/');
         return;
       }
@@ -392,9 +393,10 @@ export default function Home() {
       const t = setTimeout(() => setStoredScenario(scenario), 0);
       return () => clearTimeout(t);
     } catch {
+      setPhase('idle');
       router.push('/');
     }
-  }, [router]);
+  }, [router, setPhase]);
 
   // Auto-start: once connected and storedScenario is loaded, launch the simulation
   const autoLaunched = useRef(false);
@@ -423,18 +425,17 @@ export default function Home() {
     };
 
     reset();
+    hasMarkedReady.current = false;
+    setPhase('awaiting-snapshot');
     startSimulation(payload);
-    const t = setTimeout(() => setSimLoading(true), 0);
 
     // Seed base data for this specific scenario
     const bust = `${storedScenario.city}-${Date.now()}`;
     seedBaseData(bust);
-    return () => clearTimeout(t);
-  }, [isConnected, storedScenario, reset, startSimulation, seedBaseData]);
+  }, [isConnected, storedScenario, reset, startSimulation, seedBaseData, setPhase]);
 
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--background)' }}>
-      <LoadingScreen visible={simLoading} />
       {/* Header */}
       <div
         className="flex items-center justify-between px-4"

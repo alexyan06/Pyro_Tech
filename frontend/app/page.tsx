@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import LoadingScreen from '@/components/LoadingScreen';
+import { useLoading } from '@/lib/loadingState';
 
 const API_BASE = process.env.NEXT_PUBLIC_WS_URL?.replace(/^ws/, 'http') ?? 'http://localhost:4000';
 
@@ -71,6 +71,7 @@ function bearingToCardinal(deg: number): string {
 
 export default function SetupPage() {
   const router = useRouter();
+  const { setPhase } = useLoading();
   const [form, setForm] = useState<FormState>({
     city: '',
     datetime: new Date().toISOString().slice(0, 16),
@@ -111,6 +112,7 @@ export default function SetupPage() {
     setError(null);
     if (!form.city.trim()) { setError('Location required.'); return; }
     setLoading(true);
+    setPhase('setup');
     try {
       const windSpeedMph = Number.parseFloat(form.windSpeed);
       const windFromDeg = Number.parseFloat(form.windDirection);
@@ -141,10 +143,11 @@ export default function SetupPage() {
         .catch(() => null);
 
       sessionStorage.setItem('pyrotech_scenario', JSON.stringify(data));
-      sessionStorage.setItem('pyrotech_sim_loading', '1');
+      setPhase('connecting');
       router.push('/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error');
+      setPhase('idle');
     } finally {
       setLoading(false);
     }
@@ -152,7 +155,6 @@ export default function SetupPage() {
 
   return (
     <div className="sp-root">
-      <LoadingScreen visible={loading} />
       <div className="sp-scan" aria-hidden="true" />
       {/* Fire glow at bottom */}
       <div aria-hidden="true" style={{

@@ -1,23 +1,28 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useLoading, type LoadingPhase } from '@/lib/loadingState';
 
-interface LoadingScreenProps {
-  visible: boolean;
-}
+const PHASE_MESSAGES: Record<LoadingPhase, string> = {
+  'idle': '',
+  'setup': 'Loading scenario data...',
+  'connecting': 'Connecting to incident command...',
+  'awaiting-snapshot': 'Initializing fire physics model...',
+  'done': 'Awaiting first transmissions...',
+};
 
-const PHASES = [
-  'Connecting to incident command...',
-  'Loading scenario data...',
-  'Initializing fire physics model...',
-  'Deploying field agents...',
-  'Awaiting first transmissions...',
-];
+// Per-phase progress ceilings. Bar eases toward the ceiling for the current
+// phase and never reverses. 'done' eases all the way to 1.0, then we fade out.
+const PHASE_CAP: Record<LoadingPhase, number> = {
+  'idle': 0,
+  'setup': 0.40,
+  'connecting': 0.65,
+  'awaiting-snapshot': 0.90,
+  'done': 1.0,
+};
 
-const PHASE_INTERVAL_MS = 2200;
-const TOTAL_PROGRESS_MS = 15000;
+const FADE_MS = 650;
 
-// 20 ember particles with fixed seeds — no hydration mismatch
 const EMBERS = [
   { left: 12, delay: 0.0, duration: 3.8, size: 5, drift: -22, color: '#f97316' },
   { left: 27, delay: 0.6, duration: 4.5, size: 4, drift:  18, color: '#ef4444' },
@@ -41,41 +46,76 @@ const EMBERS = [
   { left:  4, delay: 3.3, duration: 3.6, size: 6, drift: -38, color: '#fbbf24' },
 ];
 
-export default function LoadingScreen({ visible }: LoadingScreenProps) {
-  // tick drives re-renders; phase/progress are derived from elapsed time
-  const [tick, setTick] = useState(0);
+export default function LoadingScreen() {
+  const { phase, setPhase } = useLoading();
+  const [progress, setProgress] = useState(0);
   const [opacity, setOpacity] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const startedAtRef = useRef(0);
 
-  // Mount/unmount with fade — all setStates deferred via setTimeout
-  useEffect(() => {
-    if (visible) {
-      startedAtRef.current = Date.now();
-      const t = setTimeout(() => {
-        setMounted(true);
-        setOpacity(1);
-      }, 0);
-      return () => clearTimeout(t);
-    } else {
-      const t1 = setTimeout(() => setOpacity(0), 0);
-      const t2 = setTimeout(() => setMounted(false), 650);
-      return () => { clearTimeout(t1); clearTimeout(t2); };
-    }
-  }, [visible]);
+  // The visible state lags `phase`: while the bar is finishing its 'done' tween
+  // and fading out we keep the overlay mounted. After fade, we reset to idle.
+  const phaseRef = useRef(phase);
+  const progressRef = useRef(0);
 
-  // Tick every 100ms to drive phase + progress re-renders
   useEffect(() => {
-    if (!visible) return;
-    const id = setInterval(() => setTick(t => t + 1), 100);
-    return () => clearInterval(id);
-  }, [visible]);
+    phaseRef.current = phase;
+  }, [phase]);
+
+  // Mount + fade-in when leaving idle
+  useEffect(() => {
+    if (phase === 'idle') return;
+    const tMount = window.setTimeout(() => setMounted(true), 0);
+    const tFadeIn = window.setTimeout(() => setOpacity(1), 0);
+    return () => {
+      window.clearTimeout(tMount);
+      window.clearTimeout(tFadeIn);
+    };
+  }, [phase]);
+
+  // Fade-out when 'done' bar reaches 1.0
+  useEffect(() => {
+    if (phase !== 'done') return;
+    if (progress < 0.999) return;
+    const tFadeOut = window.setTimeout(() => setOpacity(0), 0);
+    const tFade = window.setTimeout(() => {
+      setMounted(false);
+      progressRef.current = 0;
+      setProgress(0);
+      setPhase('idle');
+    }, FADE_MS);
+    return () => {
+      window.clearTimeout(tFadeOut);
+      window.clearTimeout(tFade);
+    };
+  }, [phase, progress, setPhase]);
+
+  // Tween progress toward current phase's cap on each animation frame.
+  useEffect(() => {
+    if (!mounted) return;
+    let raf = 0;
+    const tick = () => {
+      const p = phaseRef.current;
+      const target = PHASE_CAP[p];
+      const cur = progressRef.current;
+      if (cur < target) {
+        // 'done' tween is sharper so the bar fills to 100% well within the
+        // backend's lead-in window (SIM_LEAD_IN_MS = 1400 ms). Other phases
+        // ease gently with a minimum step so the bar never visually stalls.
+        const step = p === 'done'
+          ? Math.max(0.012, (target - cur) * 0.18)
+          : Math.max(0.0018, (target - cur) * 0.04);
+        progressRef.current = Math.min(cur + step, target);
+        setProgress(progressRef.current);
+      }
+      raf = window.requestAnimationFrame(tick);
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [mounted]);
 
   if (!mounted) return null;
 
-  const elapsed = tick * 100;
-  const phase = Math.min(Math.floor(elapsed / PHASE_INTERVAL_MS), PHASES.length - 1);
-  const progress = Math.min(elapsed / TOTAL_PROGRESS_MS, 0.97);
+  const message = PHASE_MESSAGES[phase] || PHASE_MESSAGES['setup'];
 
   return (
     <div
@@ -90,11 +130,10 @@ export default function LoadingScreen({ visible }: LoadingScreenProps) {
         justifyContent: 'center',
         overflow: 'hidden',
         opacity,
-        transition: 'opacity 0.6s ease-out',
+        transition: `opacity ${FADE_MS}ms ease-out`,
         pointerEvents: opacity < 0.5 ? 'none' : 'all',
       }}
     >
-      {/* Ember particles */}
       {EMBERS.map((e, i) => (
         <span
           key={i}
@@ -113,7 +152,6 @@ export default function LoadingScreen({ visible }: LoadingScreenProps) {
         />
       ))}
 
-      {/* Background fire glow at bottom */}
       <div style={{
         position: 'absolute',
         bottom: 0,
@@ -124,10 +162,7 @@ export default function LoadingScreen({ visible }: LoadingScreenProps) {
         pointerEvents: 'none',
       }} />
 
-      {/* Center content */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', position: 'relative' }}>
-
-        {/* PyroTech wordmark */}
         <div style={{ textAlign: 'center' }}>
           <div style={{
             fontFamily: 'var(--font-condensed)',
@@ -153,7 +188,6 @@ export default function LoadingScreen({ visible }: LoadingScreenProps) {
           </div>
         </div>
 
-        {/* Divider */}
         <div style={{
           width: '240px',
           height: '1px',
@@ -161,7 +195,6 @@ export default function LoadingScreen({ visible }: LoadingScreenProps) {
           opacity: 0.4,
         }} />
 
-        {/* Status message */}
         <div style={{
           fontFamily: 'var(--font-mono)',
           fontSize: '0.78rem',
@@ -171,12 +204,10 @@ export default function LoadingScreen({ visible }: LoadingScreenProps) {
           textAlign: 'center',
           animation: 'pulse-glow 2s ease-in-out infinite',
         }}>
-          {PHASES[phase]}
+          {message}
         </div>
-
       </div>
 
-      {/* Progress bar */}
       <div style={{
         position: 'absolute',
         bottom: 0,

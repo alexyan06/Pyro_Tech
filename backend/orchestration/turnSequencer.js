@@ -18,6 +18,16 @@ const PHYSICS_INTERVAL_MS = 500;  // physics update cadence (real ms)
 const LOGICAL_MINUTES_PER_CYCLE = 30;   // each agent cycle advances sim clock by 30 min
 const DEMO_AGENT_CYCLE_MS = 30_000; // smooth visual time between agent turns
 const DEFAULT_DURATION_HOURS = 6;
+// Lead-in between sending `simulation_ready` and the first physics tick.
+// The frontend's LoadingScreen needs OVERLAY_CLEAR_BUDGET_MS to finish its
+// `done`-phase tween (~140 ms) and opacity fade-out (FADE_MS = 650 ms in
+// frontend/components/LoadingScreen.tsx). After the overlay is fully gone we
+// hold for POST_FADE_GAP_MS — a deliberate beat on a clean simulation map
+// before the fire perimeter and any agent transmissions arrive. Keep these
+// two sides in sync if FADE_MS or the done-tween rate change.
+const OVERLAY_CLEAR_BUDGET_MS = 800;
+const POST_FADE_GAP_MS = 1000;
+const SIM_LEAD_IN_MS = OVERLAY_CLEAR_BUDGET_MS + POST_FADE_GAP_MS;
 
 // Default wind: 35 mph from NE (45° FROM) expressed as U/V components (m/s)
 const DEFAULT_WIND_U = parseFloat((-35 * 0.44704 * Math.sin(Math.PI / 4)).toFixed(4));
@@ -171,7 +181,15 @@ class TurnSequencer {
     // ── Physics loop: continuous fire + particles + congestion ─────────────────
     let physicsCount = 0;
     let physicsIntervalId;
-    physicsIntervalId = setInterval(() => {
+    let physicsStartTimeoutId;
+
+    // Tell the client backend init is done. The client uses this to dismiss
+    // the loading overlay; we hold the first physics tick for SIM_LEAD_IN_MS
+    // so the overlay finishes its fade-out on a clean (no fire, no agent
+    // transmissions) map.
+    this.sendToClient(ws, { type: 'simulation_ready' });
+
+    const physicsTick = () => {
       if (this.stopped) { clearInterval(physicsIntervalId); return; }
       if (this.paused) return;
 
@@ -260,10 +278,19 @@ class TurnSequencer {
       }
 
       physicsCount++;
-    }, PHYSICS_INTERVAL_MS);
+    };
+
+    physicsStartTimeoutId = setTimeout(() => {
+      if (this.stopped) return;
+      physicsTick();
+      physicsIntervalId = setInterval(physicsTick, PHYSICS_INTERVAL_MS);
+    }, SIM_LEAD_IN_MS);
 
     // ── Agent loop: runs exactly totalCycles times, advancing logical sim clock ──
     const runAgentLoop = async () => {
+      // Hold the same lead-in as the physics loop so no agent transmissions
+      // can stream while the client's loading overlay is fading out.
+      await new Promise(r => setTimeout(r, SIM_LEAD_IN_MS));
       while (this._agentRunCount < totalCycles && !this.stopped) {
         while (this.paused && !this.stopped) {
           await new Promise(r => setTimeout(r, 500));
@@ -286,6 +313,7 @@ class TurnSequencer {
     await runAgentLoop();
     // Brief grace period for the physics loop to observe this.stopped and flush final state
     await new Promise(r => setTimeout(r, 600));
+    clearTimeout(physicsStartTimeoutId);
     clearInterval(physicsIntervalId);
 
     const executiveSummary = await generateExecutiveSummary(
