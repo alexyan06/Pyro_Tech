@@ -178,6 +178,7 @@ export type ServerMessage =
   | BranchCompleteMessage
   | TimeUpdateMessage
   | ParticleUpdateMessage
+  | { type: 'simulation_ready' }
   | { type: 'error'; payload: { message: string } };
 
 export type AgentName =

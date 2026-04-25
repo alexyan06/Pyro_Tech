@@ -22,6 +22,7 @@ interface UseSimulationOptions {
   onMapEvent?: (event: MapEventData, agent?: AgentName, uiMessage?: string) => void;
   onAgentAudio?: (agent: AgentName, audioBase64: string) => void;
   onStateSnapshot?: (snap: StateSnapshot) => void;
+  onSimulationReady?: () => void;
   onParticleUpdate?: (particles: [number, number][], trips?: TripWaypoint[]) => void;
 }
 
@@ -70,6 +71,7 @@ export function useSimulation(options: UseSimulationOptions = {}) {
   const onMapEventRef   = useRef(options.onMapEvent);
   const onAgentAudioRef = useRef(options.onAgentAudio);
   const onStateSnapshotRef = useRef(options.onStateSnapshot);
+  const onSimulationReadyRef = useRef(options.onSimulationReady);
   const onParticleUpdateRef = useRef(options.onParticleUpdate);
   const simClockBaseRef = useRef<SimClockBase | null>(null);
 
@@ -77,8 +79,9 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     onMapEventRef.current   = options.onMapEvent;
     onAgentAudioRef.current = options.onAgentAudio;
     onStateSnapshotRef.current = options.onStateSnapshot;
+    onSimulationReadyRef.current = options.onSimulationReady;
     onParticleUpdateRef.current = options.onParticleUpdate;
-  }, [options.onMapEvent, options.onAgentAudio, options.onStateSnapshot, options.onParticleUpdate]);
+  }, [options.onMapEvent, options.onAgentAudio, options.onStateSnapshot, options.onSimulationReady, options.onParticleUpdate]);
 
   /** Extract agent_confidence score from a completed agent message */
   function extractConfidence(text: string): number | null {
@@ -194,6 +197,10 @@ export function useSimulation(options: UseSimulationOptions = {}) {
           onStateSnapshotRef.current?.(snap);
           break;
         }
+
+        case 'simulation_ready':
+          onSimulationReadyRef.current?.();
+          break;
 
         case 'playbook_ready':
           setPlaybook((msg.payload as { playbook_json: PlaybookData }).playbook_json);
