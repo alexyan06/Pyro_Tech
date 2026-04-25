@@ -98,7 +98,6 @@ export default function Home() {
   const router = useRouter();
   const { mapState, dispatch, reset } = useMapState();
   const [showPlaybook, setShowPlaybook] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const { enqueue: enqueueAudio, isMuted, toggleMute } = useAgentAudio();
   const [storedScenario, setStoredScenario] = useState<StoredScenario | null>(null);
   const [notifications, setNotifications] = useState<MapNotification[]>([]);
@@ -315,6 +314,7 @@ export default function Home() {
     pause,
     resume,
     stop,
+    isPaused,
     requestPlaybook,
     startBranch,
     clearBranch,
@@ -601,7 +601,7 @@ export default function Home() {
       >
         {isRunning ? (
           <>
-            <SimControl label={isPaused ? 'Resume' : 'Pause'} onClick={() => { if (isPaused) { resume(); setIsPaused(false); } else { pause(); setIsPaused(true); } }} />
+            <SimControl label={isPaused ? 'Resume' : 'Pause'} onClick={() => { if (isPaused) { resume(); } else { pause(); } }} />
             <SimControl label="Stop" danger onClick={stop} />
             <SimControl label="Playbook" purple onClick={requestPlaybook} />
           </>
