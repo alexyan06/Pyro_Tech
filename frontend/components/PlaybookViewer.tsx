@@ -253,7 +253,7 @@ export default function PlaybookViewer({ playbook, onClose }: PlaybookViewerProp
       },
     };
 
-    pdfMakeInstance.createPdf(docDefinition).download('ember-playbook.pdf');
+    pdfMakeInstance.createPdf(docDefinition).download('pyrotech-playbook.pdf');
   }, [playbook]);
 
   useEffect(() => {

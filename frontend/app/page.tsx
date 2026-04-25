@@ -112,11 +112,11 @@ export default function SetupPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Setup failed');
 
-      (window as unknown as Record<string, unknown>).__EMBER_GEOJSON_PROMISE__ = fetch(`${API_BASE}/api/geojson-bundle`, { cache: 'no-store' })
+      (window as unknown as Record<string, unknown>).__PYROTECH_GEOJSON_PROMISE__ = fetch(`${API_BASE}/api/geojson-bundle`, { cache: 'no-store' })
         .then(r => r.ok ? r.json() : null)
         .catch(() => null);
 
-      sessionStorage.setItem('ember_scenario', JSON.stringify(data));
+      sessionStorage.setItem('pyrotech_scenario', JSON.stringify(data));
       router.push('/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -137,8 +137,8 @@ export default function SetupPage() {
       <main className="sp-main">
         {/* Left: Identity */}
         <div className="sp-left">
-          <div className="sp-ics-tag">ICS-EMBER-1 · Training Scenario</div>
-          <h1 className="sp-title">EMBER</h1>
+          <div className="sp-ics-tag">ICS-PYROTECH-1 · Training Scenario</div>
+          <h1 className="sp-title">PYROTECH</h1>
           <p className="sp-desc">
             Multi-agent AI incident command simulation. Configure a U.S. wildfire scenario
             and deploy seven specialized AI systems to model coordinated disaster response
