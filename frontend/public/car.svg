@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Car body -->
+  <rect x="6" y="10" width="20" height="14" rx="3" fill="white" opacity="0.95"/>
+  <!-- Windshield -->
+  <rect x="9" y="12" width="14" height="5" rx="1.5" fill="#60a5fa" opacity="0.8"/>
+  <!-- Front -->
+  <rect x="8" y="8" width="16" height="4" rx="2" fill="white" opacity="0.9"/>
+  <!-- Headlights -->
+  <circle cx="10" cy="8" r="1.5" fill="#fde68a"/>
+  <circle cx="22" cy="8" r="1.5" fill="#fde68a"/>
+  <!-- Taillights -->
+  <circle cx="10" cy="24" r="1.5" fill="#fca5a5"/>
+  <circle cx="22" cy="24" r="1.5" fill="#fca5a5"/>
+  <!-- Wheels -->
+  <circle cx="9"  cy="13" r="2" fill="#374151"/>
+  <circle cx="23" cy="13" r="2" fill="#374151"/>
+  <circle cx="9"  cy="21" r="2" fill="#374151"/>
+  <circle cx="23" cy="21" r="2" fill="#374151"/>
+</svg>
