@@ -43,6 +43,7 @@ interface DispatchPath {
   id: string;
   type: string;
   path: [number, number][];
+  startedAt: number;
 }
 
 interface ActionPulseData extends MapActionPulse {
@@ -129,7 +130,6 @@ function buildDispatchPath(from: [number, number], to: [number, number], highway
     coordDistance(highwayStart, highwayEnd) +
     coordDistance(highwayEnd, to);
 
-  // Use highways only when they are plausibly helpful, not as a forced detour.
   if (directDistance === 0 || highwayDistance > directDistance * 1.6) return [from, to];
 
   return [from, highwayStart, highwayEnd, to].filter((coord, index, path) => {
@@ -163,6 +163,37 @@ function interpolatePath(path: [number, number][], t: number): [number, number] 
   return path[path.length - 1];
 }
 
+// Lerp fire polygon vertices between two perimeter states for smooth 60fps expansion.
+// Requires both perimeters to have the same vertex count (guaranteed by WildfireEngine's
+// fixed numPoints=72). Spot fires (features[1..]) snap immediately.
+function lerpPerimeter(
+  prev: GeoJSON.FeatureCollection | null,
+  next: GeoJSON.FeatureCollection | null,
+  t: number,
+): GeoJSON.FeatureCollection | null {
+  if (!prev || !next || prev.features.length === 0 || next.features.length === 0) return next;
+  if (t >= 1) return next;
+  const prevGeom = prev.features[0].geometry as GeoJSON.Polygon;
+  const nextGeom = next.features[0].geometry as GeoJSON.Polygon;
+  const prevCoords = prevGeom?.coordinates?.[0];
+  const nextCoords = nextGeom?.coordinates?.[0];
+  if (!prevCoords || !nextCoords || prevCoords.length !== nextCoords.length) return next;
+  const lerpedCoords = prevCoords.map((pc, i) => {
+    const nc = nextCoords[i];
+    return [pc[0] + (nc[0] - pc[0]) * t, pc[1] + (nc[1] - pc[1]) * t];
+  });
+  return {
+    ...next,
+    features: [
+      {
+        ...next.features[0],
+        geometry: { type: 'Polygon' as const, coordinates: [lerpedCoords] },
+      },
+      ...next.features.slice(1),
+    ],
+  };
+}
+
 const ZONE_FILL_COLORS: Record<ZoneStatus, [number, number, number, number]> = {
   mandatory: [239, 68, 68, 120],
   warning: [249, 115, 22, 100],
@@ -180,24 +211,45 @@ const ZONE_LINE_COLORS: Record<ZoneStatus, [number, number, number, number]> = {
 const ANIM_LOOP_LENGTH = 1800;
 /** How many animation units to advance per millisecond */
 const ANIM_SPEED = 0.03; // 1800 units ÷ 0.03 = 60,000 ms = 60 seconds per full loop
+/** Must match PHYSICS_INTERVAL_MS in backend/orchestration/turnSequencer.js */
+const PHYSICS_INTERVAL_MS = 500;
 
 // ── Sub-component for DeckGL to isolate animation re-renders ────────────────
 const MapOverlay = memo(function MapOverlay({
   mapState,
   staticLayers,
-  viewState
+  viewState,
+  firePerimeter,
 }: {
   mapState: MapState,
   staticLayers: Layer[],
-  viewState: Record<string, unknown>
+  viewState: Record<string, unknown>,
+  firePerimeter: GeoJSON.FeatureCollection | null,
 }) {
   const [animTime, setAnimTime] = useState(0);
   const [wallClockMs, setWallClockMs] = useState(0);
+  const [lerpedPerimeter, setLerpedPerimeter] = useState(firePerimeter);
+
   const rafRef = useRef<number | null>(null);
   const lastTsRef = useRef<number | null>(null);
+  const frameCountRef = useRef(0);
 
-  const hasAnimated = (mapState.resourceDispatches?.length ?? 0) > 0 || mapState.tripWaypoints.length > 0 || mapState.recentActions.length > 0;
-  
+  // Lerp refs — track previous and target perimeter for smooth interpolation
+  const prevPerimRef = useRef<GeoJSON.FeatureCollection | null>(firePerimeter);
+  const nextPerimRef = useRef<GeoJSON.FeatureCollection | null>(firePerimeter);
+  const perimUpdateTimeRef = useRef<number>(0);
+  const lerpedPerimRef = useRef<GeoJSON.FeatureCollection | null>(firePerimeter);
+
+  const hasFirePerimeter = (firePerimeter?.features?.length ?? 0) > 0;
+  const hasAnimated = hasFirePerimeter || (mapState.resourceDispatches?.length ?? 0) > 0 || mapState.tripWaypoints.length > 0 || mapState.recentActions.length > 0;
+
+  // When a new perimeter arrives, save the current lerped position as start point
+  useEffect(() => {
+    prevPerimRef.current = lerpedPerimRef.current ?? firePerimeter;
+    nextPerimRef.current = firePerimeter;
+    perimUpdateTimeRef.current = Date.now();
+  }, [firePerimeter]);
+
   useEffect(() => {
     if (!hasAnimated) {
       if (rafRef.current != null) {
@@ -212,7 +264,26 @@ const MapOverlay = memo(function MapOverlay({
       const delta = ts - lastTsRef.current;
       lastTsRef.current = ts;
       setAnimTime(prev => (prev + delta * ANIM_SPEED) % ANIM_LOOP_LENGTH);
-      setWallClockMs(Date.now());
+
+      // Throttle wallClockMs to ~10fps — dispatch/pulse position memos only recompute
+      // when this changes, so limiting it to 10fps cuts their work by ~6×
+      frameCountRef.current += 1;
+      if (frameCountRef.current % 6 === 0) {
+        setWallClockMs(Date.now());
+      }
+
+      // Lerp fire perimeter vertices between physics ticks for smooth 60fps expansion
+      const elapsed = Date.now() - perimUpdateTimeRef.current;
+      if (elapsed < PHYSICS_INTERVAL_MS) {
+        const t = elapsed / PHYSICS_INTERVAL_MS;
+        const lerped = lerpPerimeter(prevPerimRef.current, nextPerimRef.current, t);
+        lerpedPerimRef.current = lerped;
+        setLerpedPerimeter(lerped);
+      } else if (lerpedPerimRef.current !== nextPerimRef.current) {
+        lerpedPerimRef.current = nextPerimRef.current;
+        setLerpedPerimeter(nextPerimRef.current);
+      }
+
       rafRef.current = requestAnimationFrame(step);
     };
 
@@ -223,6 +294,30 @@ const MapOverlay = memo(function MapOverlay({
     };
   }, [hasAnimated]);
 
+  const fireLayer = useMemo(() => new GeoJsonLayer({
+    id: 'fire-perimeter',
+    data: lerpedPerimeter ?? { type: 'FeatureCollection', features: [] },
+    filled: true,
+    stroked: true,
+    getFillColor: [220, 60, 0, 120],
+    getLineColor: [255, 140, 0, 255],
+    getLineWidth: 3,
+    lineWidthUnits: 'pixels',
+  }), [lerpedPerimeter]);
+
+  // Stable path data — recomputed only when dispatches/routes change, not on every frame
+  const dispatchPaths = useMemo((): DispatchPath[] => {
+    const dispatches = mapState.resourceDispatches;
+    if (!dispatches || dispatches.length === 0) return [];
+    const highwayCoords = routeCoordinates(mapState.routeFeatures);
+    return dispatches.map(d => ({
+      id: d.id,
+      type: d.type,
+      path: buildDispatchPath(d.from, d.to, highwayCoords),
+      startedAt: d.startedAt,
+    }));
+  }, [mapState.resourceDispatches, mapState.routeFeatures]);
+
   const tripsLayer = useMemo(
     () => mapState.tripWaypoints.length > 0
       ? createTripsLayer(mapState.tripWaypoints, animTime)
@@ -231,26 +326,18 @@ const MapOverlay = memo(function MapOverlay({
   );
 
   const dispatchLayers = useMemo(() => {
-    const dispatches = mapState.resourceDispatches;
-    if (!dispatches || dispatches.length === 0) return [];
+    if (dispatchPaths.length === 0) return [];
     const DURATION_MS = 24000;
-    const highwayCoords = routeCoordinates(mapState.routeFeatures);
-    const paths: DispatchPath[] = dispatches.map(d => ({
-      id: d.id,
-      type: d.type,
-      path: buildDispatchPath(d.from, d.to, highwayCoords),
-    }));
-    const moving: DispatchMoving[] = dispatches
+    const moving: DispatchMoving[] = dispatchPaths
       .map(d => {
         const t = Math.min(1, Math.max(0, (wallClockMs - d.startedAt) / DURATION_MS));
-        const path = buildDispatchPath(d.from, d.to, highwayCoords);
-        return { id: d.id, type: d.type, path, position: interpolatePath(path, t), t };
+        return { id: d.id, type: d.type, path: d.path, position: interpolatePath(d.path, t), t };
       })
       .filter(d => d.t < 1);
     const layers: Layer[] = [
       new PathLayer<DispatchPath>({
         id: 'resource-dispatch-paths',
-        data: paths,
+        data: dispatchPaths,
         getPath: (d) => d.path,
         getColor: (d) => d.type === 'dozer' ? [250, 204, 21, 230] : [239, 68, 68, 235],
         getWidth: 5,
@@ -272,7 +359,7 @@ const MapOverlay = memo(function MapOverlay({
           lineWidthMinPixels: 2,
           stroked: true,
           radiusUnits: 'pixels',
-          updateTriggers: { getPosition: animTime },
+          updateTriggers: { getPosition: wallClockMs },
         }),
         new TextLayer<DispatchMoving>({
           id: 'resource-dispatch-truck-icons',
@@ -285,13 +372,13 @@ const MapOverlay = memo(function MapOverlay({
           getAlignmentBaseline: 'center',
           billboard: true,
           sizeUnits: 'pixels',
-          updateTriggers: { getPosition: animTime },
+          updateTriggers: { getPosition: wallClockMs },
         }),
       );
     }
 
     return layers;
-  }, [mapState.resourceDispatches, mapState.routeFeatures, animTime, wallClockMs]);
+  }, [dispatchPaths, wallClockMs]);
 
   const suppressionLayer = useMemo(() => {
     const zones = Object.values(mapState.suppressionZones);
@@ -415,11 +502,12 @@ const MapOverlay = memo(function MapOverlay({
 
   const layers = useMemo(() => [
     ...staticLayers,
+    fireLayer,
     suppressionLayer,
     tripsLayer,
     ...dispatchLayers,
     ...(Array.isArray(actionPulseLayer) ? actionPulseLayer : [actionPulseLayer]),
-  ].filter((l): l is Layer => l !== null), [staticLayers, suppressionLayer, tripsLayer, dispatchLayers, actionPulseLayer]);
+  ].filter((l): l is Layer => l !== null), [staticLayers, fireLayer, suppressionLayer, tripsLayer, dispatchLayers, actionPulseLayer]);
 
   return (
     <DeckGL
@@ -453,24 +541,6 @@ export default function MapView({ mapState, center }: MapViewProps) {
       return () => clearTimeout(t);
     }
   }, [center, setProgrammaticView]);
-
-  // ── Fire perimeter ──────────────────────────────────────────────────────────
-  const fireLayer = useMemo(() => new GeoJsonLayer({
-    id: 'fire-perimeter',
-    data: mapState.firePerimeter ?? { type: 'FeatureCollection', features: [] },
-    filled: true,
-    stroked: true,
-    getFillColor: [220, 60, 0, 120],
-    getLineColor: [255, 140, 0, 255],
-    getLineWidth: 3,
-    lineWidthUnits: 'pixels',
-    transitions: {
-      getFillColor: { duration: 1200 },
-      getLineColor: { duration: 1200 },
-      geometry: { duration: 2000, easing: (t: number) => t * (2 - t) },
-      getPolygon: { duration: 2000, easing: (t: number) => t * (2 - t) },
-    },
-  }), [mapState.firePerimeter]);
 
   const fireBehaviorLayer = useMemo(() => {
     const behavior = mapState.fireBehavior;
@@ -582,10 +652,10 @@ export default function MapView({ mapState, center }: MapViewProps) {
     [mapState.resources, viewState.zoom]
   );
 
+  // Fire perimeter is handled inside MapOverlay with client-side lerp — excluded here
   const staticLayers = useMemo(() => [
     populationPointLayer,
     firmsLayer,
-    fireLayer,
     fireBehaviorLayer,
     zoneLayer,
     routeLayer,
@@ -593,7 +663,7 @@ export default function MapView({ mapState, center }: MapViewProps) {
     ...shelterLayers,
     ...(resourceLayer || []),
   ].filter((l) => l !== null) as Layer[], [
-    populationPointLayer, firmsLayer, zoneLayer, routeLayer, fireLayer, fireBehaviorLayer,
+    populationPointLayer, firmsLayer, zoneLayer, routeLayer, fireBehaviorLayer,
     infrastructureLayers, shelterLayers, resourceLayer
   ]);
 
@@ -623,7 +693,7 @@ export default function MapView({ mapState, center }: MapViewProps) {
           const keepPatterns = [/motorway/, /trunk/, /primary/];
           const faintPatterns = [/secondary/, /tertiary/, /arterial/];
           const layers = map.getStyle().layers || [];
-          
+
           for (const layer of layers) {
             const id = layer.id;
             if (!/road|tunnel|bridge/i.test(id)) continue;
@@ -661,7 +731,12 @@ export default function MapView({ mapState, center }: MapViewProps) {
         />
       </Map>
 
-      <MapOverlay mapState={mapState} staticLayers={staticLayers} viewState={viewState} />
+      <MapOverlay
+        mapState={mapState}
+        staticLayers={staticLayers}
+        viewState={viewState}
+        firePerimeter={mapState.firePerimeter}
+      />
 
       <MapLegend />
     </div>
