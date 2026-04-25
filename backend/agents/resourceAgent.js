@@ -24,9 +24,11 @@ GUIDELINES:
 - If fire is active and at least one fire station is available, emit at least one deploy_resource event every cycle.
 - MANDATORY: every deploy_resource MUST include both \`from_station_id\` and \`from_location\` chosen from the "AVAILABLE FIRE STATIONS" block in the context. Resources physically roll out from those stations toward the \`location\` where they'll stage.
 - Pick the station closest to the deployment \`location\` so the response feels realistic.
-- \`location\` is the staging point near the fire perimeter (not inside it unless attacking the head).
+- \`location\` for dozers: must be AHEAD of the fire's leading edge — outside the perimeter in the wind direction — to cut firebreaks the fire advances into. NEVER place dozers inside the fire.
+- \`location\` for engines: on the flanks (sides) of the fire, at or just outside the perimeter, for structure defense and direct attack.
+- Scale counts with fire size and elapsed time. Large, wind-driven fires need strike-team quantities, not the same small package every cycle.
 - NEVER mention or deploy any resource_type outside "engine" and "dozer".
-- PHYSICAL IMPACT: deployments create suppression zones that slow fire spread. Engines attack structure protection and dozers cut containment lines.`;
+- PHYSICAL IMPACT: deployments create suppression zones that slow fire spread. Dozers create containment lines ahead of the fire; engines hold the flanks.`;
 
 class ResourceAgent extends BaseAgent {
   constructor() {
@@ -49,19 +51,22 @@ class ResourceAgent extends BaseAgent {
       lat: lat - 0.02,
     };
     const secondStation = (fireStations && fireStations[1]) || station;
+    const acres = Number(context.match(/Fire:\s+(\d+(?:\.\d+)?) acres burned/)?.[1]) || 0;
+    const engineCount = Math.min(80, Math.max(12, Math.ceil(acres / 80)));
+    const dozerCount = Math.min(24, Math.max(3, Math.ceil(acres / 350)));
 
     const flankLng = (lng + 0.01).toFixed(4);
     const flankLat = (lat + 0.01).toFixed(4);
     const headLng  = (lng + 0.02).toFixed(4);
     const headLat  = (lat + 0.02).toFixed(4);
 
-    return `Heard, Evac — ${s1.name} is open for the ${z1} flow. Rolling 12 engines from ${station.name} to the fire flank and sending two dozer teams from ${secondStation.name} to cut a containment line near the head.
+    return `Heard, Evac — ${s1.name} is open for the ${z1} flow. Rolling ${engineCount} engines from ${station.name} to both flanks and sending ${dozerCount} dozers from ${secondStation.name} to cut line ahead of the head.
 
 \`\`\`json
-{"type": "deploy_resource", "resource_type": "engine", "location": [${flankLng}, ${flankLat}], "count": 12, "assignment": "Hold the southern flank near ${location}", "from_station_id": "${station.id}", "from_location": [${station.lng.toFixed(5)}, ${station.lat.toFixed(5)}], "ui_message": "12 engines deployed to fire flank"}
+{"type": "deploy_resource", "resource_type": "engine", "location": [${flankLng}, ${flankLat}], "count": ${engineCount}, "assignment": "Hold both flanks near ${location}", "from_station_id": "${station.id}", "from_location": [${station.lng.toFixed(5)}, ${station.lat.toFixed(5)}], "ui_message": "${engineCount} engines deployed to fire flanks"}
 \`\`\`
 \`\`\`json
-{"type": "deploy_resource", "resource_type": "dozer", "location": [${headLng}, ${headLat}], "count": 2, "assignment": "Cut containment line near the fire head", "from_station_id": "${secondStation.id}", "from_location": [${secondStation.lng.toFixed(5)}, ${secondStation.lat.toFixed(5)}], "ui_message": "2 dozers cutting containment line"}
+{"type": "deploy_resource", "resource_type": "dozer", "location": [${headLng}, ${headLat}], "count": ${dozerCount}, "assignment": "Cut containment line ahead of the fire head", "from_station_id": "${secondStation.id}", "from_location": [${secondStation.lng.toFixed(5)}, ${secondStation.lat.toFixed(5)}], "ui_message": "${dozerCount} dozers cutting containment line"}
 \`\`\`
 \`\`\`json
 {"type": "update_shelter", "shelter_id": "${s1.id}", "occupancy": 800, "capacity": 3000, "status": "open", "ui_message": "Shelter ${s1.id} opened for evacuees"}

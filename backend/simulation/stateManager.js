@@ -161,6 +161,9 @@ class StateManager {
     switch (event.type) {
       case 'update_fire_perimeter':
         this.state.fire.perimeter_geojson = event.geojson;
+        if (event.geojson?.features?.[0]?.properties?.tick != null) {
+          this._pruneSuppressionZones(event.geojson.features[0].properties.tick);
+        }
         if (event.geojson?.features?.[0]?.properties?.acres != null) {
           this.state.fire.acres_burned = event.geojson.features[0].properties.acres;
         }
@@ -259,46 +262,88 @@ class StateManager {
 
         // Create a suppression zone (buffer) around the deployment
         if (Array.isArray(event.location) && event.location.length === 2) {
+          const createdElapsedHours = Number.isFinite(Number(event.elapsed_hours))
+            ? Number(event.elapsed_hours)
+            : this._lastEvolveElapsedHours;
+          const arrivalElapsedHours = Number.isFinite(Number(event.arrival_elapsed_hours))
+            ? Number(event.arrival_elapsed_hours)
+            : createdElapsedHours + 0.04;
+          this._pruneSuppressionZones(createdElapsedHours);
+
           // Engines hold a tighter flank; dozers create a wider containment line.
           const radiusBaseMap = { engine: 0.45, dozer: 0.8 };
           const radiusCapMap = { engine: 1.25, dozer: 1.7 };
           const radius = Math.min(
             radiusCapMap[event.resource_type] || 1.25,
-            (radiusBaseMap[event.resource_type] || 0.45) * Math.sqrt(event.count),
+            (radiusBaseMap[event.resource_type] || 0.45) * Math.sqrt(Math.min(3, event.count)),
           );
           
           try {
-            const point = turf.point(event.location);
-            const buffer = turf.buffer(point, radius, { units: 'kilometers' });
-            
-            const factorMap = { engine: 0.34, dozer: 0.58 };
+            const factorMap = { engine: 0.52, dozer: 0.88 };
+            const factorCapMap = { engine: 0.72, dozer: 0.96 };
+            const baselineCountMap = { engine: 8, dozer: 2 };
             const rampMap = { engine: 0.45, dozer: 0.65 };
             const sectorMap = { engine: 90, dozer: 58 };
-            const factor = factorMap[event.resource_type] || 0.34;
-            const createdElapsedHours = Number.isFinite(Number(event.elapsed_hours))
-              ? Number(event.elapsed_hours)
-              : this._lastEvolveElapsedHours;
+            const ttlMap = { engine: 1.4, dozer: 2.4 };
+            const baseFactor = factorMap[event.resource_type] || 0.34;
+            const baselineCount = baselineCountMap[event.resource_type] || 8;
+            const countScale = 0.85 + 0.15 * Math.sqrt(event.count / baselineCount);
+            const factor = Math.min(factorCapMap[event.resource_type] || 0.72, baseFactor * countScale);
+            const centers = [event.location];
+            let primaryZone = null;
+            for (let i = 0; i < centers.length; i++) {
+              const center = centers[i];
+              const zoneCount = 1;
+              const point = turf.point(center);
+              const buffer = turf.buffer(point, radius, { units: 'kilometers' });
+              const zoneBearing = this._suppressionZoneBearing(center);
+              const zone = {
+                id: `${event.action_id || `${event.resource_type}-${Date.now()}`}-${i}`,
+                geojson: buffer,
+                factor,
+                type: event.resource_type,
+                center,
+                bearing_deg: zoneBearing,
+                radius_km: radius,
+                cut_depth_km: event.resource_type === 'dozer' ? Math.min(1.1, 0.75 + 0.03 * zoneCount) : 0,
+                count: 1,
+                ramp_hours: rampMap[event.resource_type] || 0.5,
+                sector_degrees: sectorMap[event.resource_type] || 75,
+                created_elapsed_hours: createdElapsedHours,
+                last_refreshed_elapsed_hours: createdElapsedHours,
+                active_after_elapsed_hours: arrivalElapsedHours,
+                expires_elapsed_hours: arrivalElapsedHours + (ttlMap[event.resource_type] || 1.5),
+                timestamp: Date.now(),
+              };
+              primaryZone = primaryZone || zone;
 
-            this.state.fire.suppression_zones.push({
-              geojson: buffer,
-              factor,
-              type: event.resource_type,
-              center: event.location,
-              radius_km: radius,
-              count: event.count,
-              ramp_hours: rampMap[event.resource_type] || 0.5,
-              sector_degrees: sectorMap[event.resource_type] || 75,
-              created_elapsed_hours: createdElapsedHours,
-              active_after_elapsed_hours: createdElapsedHours + 0.04,
-              timestamp: Date.now()
-            });
+              const existingIdx = this._findSimilarSuppressionZone(zone);
+              if (existingIdx >= 0) {
+                const existing = this.state.fire.suppression_zones[existingIdx];
+                this.state.fire.suppression_zones[existingIdx] = {
+                  ...existing,
+                  ...zone,
+                  id: existing.id || zone.id,
+                  factor: Math.max(Number(existing.factor) || 0, zone.factor),
+                  count: Math.max(Number(existing.count) || 0, zone.count),
+                  created_elapsed_hours: Number(existing.created_elapsed_hours ?? zone.created_elapsed_hours),
+                  active_after_elapsed_hours: Number(existing.active_after_elapsed_hours ?? zone.active_after_elapsed_hours),
+                };
+              } else {
+                this.state.fire.suppression_zones.push(zone);
+              }
+            }
+            this._capSuppressionZones();
             derivedEvents.push({
               type: 'suppression_zone',
+              action_id: primaryZone?.id || event.action_id,
               resource_type: event.resource_type,
-              geojson: buffer,
+              geojson: primaryZone?.geojson,
+              visual_geojson: primaryZone ? this._suppressionVisualGeoJson(primaryZone) : undefined,
               effectiveness: factor,
               radius_km: radius,
               ramp_hours: rampMap[event.resource_type] || 0.5,
+              active_after_elapsed_hours: primaryZone?.active_after_elapsed_hours,
               source_resource_event_id: event.action_id,
               action_location: event.location,
               ui_message: `${event.resource_type || 'Resource'} suppression area established`,
@@ -382,6 +427,149 @@ class StateManager {
         break;
     }
     return derivedEvents;
+  }
+
+  _pruneSuppressionZones(elapsedHours) {
+    if (!Array.isArray(this.state.fire.suppression_zones)) {
+      this.state.fire.suppression_zones = [];
+      return;
+    }
+    if (!Number.isFinite(Number(elapsedHours))) return;
+    const now = Number(elapsedHours);
+    this.state.fire.suppression_zones = this.state.fire.suppression_zones.filter((zone) => {
+      const expires = Number(zone.expires_elapsed_hours);
+      return !Number.isFinite(expires) || expires > now;
+    });
+  }
+
+  _capSuppressionZones() {
+    const zones = this.state.fire.suppression_zones || [];
+    const maxZones = 30;
+    if (zones.length <= maxZones) return;
+    this.state.fire.suppression_zones = zones
+      .slice()
+      .sort((a, b) => Number(a.last_refreshed_elapsed_hours ?? a.created_elapsed_hours ?? 0) -
+        Number(b.last_refreshed_elapsed_hours ?? b.created_elapsed_hours ?? 0))
+      .slice(zones.length - maxZones);
+  }
+
+  _findSimilarSuppressionZone(candidate) {
+    const zones = this.state.fire.suppression_zones || [];
+    const center = candidate.center;
+    if (!Array.isArray(center)) return -1;
+    const distanceThreshold = candidate.type === 'dozer' ? 0.35 : 0.35;
+    const sectorThreshold = Math.max(25, Number(candidate.sector_degrees || 75) * 0.65);
+
+    return zones.findIndex((zone) => {
+      if (zone.type !== candidate.type || !Array.isArray(zone.center)) return false;
+      if (this._distanceKm(zone.center, center) > distanceThreshold) return false;
+      if (!Number.isFinite(Number(zone.bearing_deg)) || !Number.isFinite(Number(candidate.bearing_deg))) return true;
+      return this._angularDistance(Number(zone.bearing_deg), Number(candidate.bearing_deg)) <= sectorThreshold;
+    });
+  }
+
+  _suppressionZoneBearing(location) {
+    const props = this.state.fire.perimeter_geojson?.features?.[0]?.properties || {};
+    const origin = Array.isArray(props.origin)
+      ? props.origin
+      : this.state.scenario?.fireOrigin
+        ? [this.state.scenario.fireOrigin.lng, this.state.scenario.fireOrigin.lat]
+        : null;
+    return origin && Array.isArray(location) ? this._bearing(origin, location) : undefined;
+  }
+
+  _expandedSuppressionCenters(location, resourceType, count, bearingDeg) {
+    if (!Array.isArray(location)) return [];
+    const maxSegments = resourceType === 'dozer' ? 5 : 6;
+    const unitsPerSegment = resourceType === 'dozer' ? 3 : 10;
+    const segments = Math.max(1, Math.min(maxSegments, Math.ceil((Number(count) || 1) / unitsPerSegment)));
+    if (segments === 1 || !Number.isFinite(Number(bearingDeg))) return [location];
+
+    const lateralBearing = (Number(bearingDeg) + 90) % 360;
+    const spacingKm = resourceType === 'dozer' ? 0.55 : 0.7;
+    const midpoint = (segments - 1) / 2;
+    const centers = [];
+    for (let i = 0; i < segments; i++) {
+      const offsetKm = (i - midpoint) * spacingKm;
+      const bearing = offsetKm >= 0 ? lateralBearing : (lateralBearing + 180) % 360;
+      centers.push(this._pointAtBearingAndDistance(location, bearing, Math.abs(offsetKm)));
+    }
+    return centers;
+  }
+
+  _suppressionVisualGeoJson(zone) {
+    if (!zone || !Array.isArray(zone.center)) return zone?.geojson;
+    if (zone.type === 'dozer') {
+      const bearing = Number.isFinite(Number(zone.bearing_deg)) ? Number(zone.bearing_deg) : 0;
+      const lengthKm = Math.max(0.6, Math.min(1.6, Number(zone.radius_km) || 1.0));
+      const lateral = (bearing + 90) % 360;
+      const start = this._pointAtBearingAndDistance(zone.center, lateral + 180, lengthKm / 2);
+      const end = this._pointAtBearingAndDistance(zone.center, lateral, lengthKm / 2);
+      return {
+        type: 'Feature',
+        properties: {
+          type: 'dozer_line',
+          resource_type: 'dozer',
+          effectiveness: zone.factor,
+        },
+        geometry: {
+          type: 'LineString',
+          coordinates: [start, end],
+        },
+      };
+    }
+
+    const radius = Math.max(0.12, Math.min(0.32, (Number(zone.radius_km) || 0.8) * 0.22));
+    try {
+      return turf.buffer(turf.point(zone.center), radius, { units: 'kilometers' });
+    } catch (_) {
+      return zone.geojson;
+    }
+  }
+
+  _angularDistance(angleA, angleB) {
+    return Math.abs(((angleA - angleB + 540) % 360) - 180);
+  }
+
+  _bearing(from, to) {
+    const lat1 = from[1] * Math.PI / 180;
+    const lat2 = to[1] * Math.PI / 180;
+    const deltaLng = (to[0] - from[0]) * Math.PI / 180;
+    const y = Math.sin(deltaLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) -
+      Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  }
+
+  _distanceKm(a, b) {
+    const R = 6371;
+    const dLat = (b[1] - a[1]) * Math.PI / 180;
+    const dLng = (b[0] - a[0]) * Math.PI / 180;
+    const lat1 = a[1] * Math.PI / 180;
+    const lat2 = b[1] * Math.PI / 180;
+    const h = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  }
+
+  _pointAtBearingAndDistance(center, bearingDeg, distanceKm) {
+    const R = 6371;
+    const lat1 = center[1] * Math.PI / 180;
+    const lng1 = center[0] * Math.PI / 180;
+    const bearing = bearingDeg * Math.PI / 180;
+    const d = distanceKm / R;
+    const lat2 = Math.asin(
+      Math.sin(lat1) * Math.cos(d) +
+      Math.cos(lat1) * Math.sin(d) * Math.cos(bearing),
+    );
+    const lng2 = lng1 + Math.atan2(
+      Math.sin(bearing) * Math.sin(d) * Math.cos(lat1),
+      Math.cos(d) - Math.sin(lat1) * Math.sin(lat2),
+    );
+    return [
+      Number((lng2 * 180 / Math.PI).toFixed(6)),
+      Number((lat2 * 180 / Math.PI).toFixed(6)),
+    ];
   }
 
   /**

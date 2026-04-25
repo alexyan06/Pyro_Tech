@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 interface LegendItem {
-  type: 'swatch' | 'dot' | 'arc' | 'icon' | 'text' | 'heatmap' | 'trail';
+  type: 'swatch' | 'dot' | 'arc' | 'icon' | 'text' | 'heatmap' | 'trail' | 'line';
   color?: string;
   borderColor?: string;
   icon?: string;
@@ -22,7 +22,8 @@ const STATIC_LEGEND_GROUPS: LegendGroup[] = [
       { type: 'swatch', color: 'rgba(220, 60, 0, 0.47)', borderColor: 'rgba(255, 140, 0, 1)', label: 'Active Fire Perimeter' },
       { type: 'trail', color: 'rgba(255, 190, 80, 0.9)', label: 'Wind / Head Fire Direction' },
       { type: 'dot', color: 'rgba(255, 80, 30, 0.9)', borderColor: 'rgba(255, 255, 255, 0.6)', label: 'Satellite Fire Detection (FIRMS)' },
-      { type: 'swatch', color: 'rgba(59, 130, 246, 0.3)', borderColor: 'rgba(34, 197, 94, 0.8)', label: 'Suppression Zone' },
+      { type: 'swatch', color: 'rgba(34, 197, 94, 0.18)', borderColor: 'rgba(34, 197, 94, 0.75)', label: 'Engine Support' },
+      { type: 'line', color: 'rgba(250, 204, 21, 0.9)', label: 'Dozer Line' },
     ],
   },
   {
@@ -272,17 +273,17 @@ function Symbol({ item }: { item: LegendItem }) {
     );
   }
 
-  if (item.type === 'trail') {
+  if (item.type === 'trail' || item.type === 'line') {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: SIZE + 4, flexShrink: 0 }}>
         <span
           style={{
             display: 'inline-block',
             width: SIZE + 2,
-            height: '3px',
+            height: item.type === 'line' ? '4px' : '3px',
             borderRadius: '1px',
             background: item.color,
-            boxShadow: `0 0 4px ${item.color}`,
+            boxShadow: item.type === 'line' ? 'none' : `0 0 4px ${item.color}`,
           }}
         />
       </div>

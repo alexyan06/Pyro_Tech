@@ -1,6 +1,17 @@
 import type { MapEventData } from './types';
 import type { MapAction } from '@/hooks/useMapState';
 
+const SIM_HOUR_TO_DISPATCH_MS = 60000;
+
+function isLngLatPath(value: unknown): value is [number, number][] {
+  return Array.isArray(value) && value.every(coord =>
+    Array.isArray(coord) &&
+    coord.length >= 2 &&
+    typeof coord[0] === 'number' &&
+    typeof coord[1] === 'number'
+  );
+}
+
 /**
  * Translates a MapEventData from the server into a dispatch call
  * for the useMapState reducer.
@@ -49,32 +60,41 @@ export function dispatchMapEvent(
         status: event.status as 'open' | 'full' | 'closed',
       });
       break;
-    case 'deploy_resource':
-      dispatch({
-        type: 'DEPLOY_RESOURCE',
-        resourceType: event.resource_type,
-        location: event.location,
-        count: event.count,
-      });
+    case 'deploy_resource': {
+      const durationMs = typeof event.travel_hours === 'number'
+        ? Math.max(4000, event.travel_hours * SIM_HOUR_TO_DISPATCH_MS)
+        : undefined;
       if (Array.isArray(event.from_location) && event.from_location.length === 2) {
         dispatch({
           type: 'ADD_RESOURCE_DISPATCH',
           dispatch: {
-            id: `${event.from_station_id ?? 'station'}-${event.resource_type}-${Date.now()}`,
+            id: `${event.action_id ?? event.from_station_id ?? 'station'}-${event.resource_type}-${Date.now()}`,
             type: event.resource_type,
             from: event.from_location,
             to: event.location,
+            path: isLngLatPath(event.dispatch_path) ? event.dispatch_path : undefined,
+            durationMs,
             startedAt: Date.now(),
           },
         });
       }
+      window.setTimeout(() => {
+        dispatch({
+          type: 'DEPLOY_RESOURCE',
+          resourceType: event.resource_type,
+          location: event.location,
+          count: event.count,
+        });
+      }, durationMs ?? 0);
       break;
+    }
     case 'suppression_zone':
       dispatch({
         type: 'ADD_SUPPRESSION_ZONE',
         zone: {
           id: event.action_id ?? event.source_resource_event_id ?? `suppression-${Date.now()}`,
           geojson: event.geojson,
+          visual_geojson: event.visual_geojson,
           effectiveness: event.effectiveness,
           resource_type: event.resource_type,
         },

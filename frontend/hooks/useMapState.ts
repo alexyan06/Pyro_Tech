@@ -28,6 +28,7 @@ export interface MapActionPulse {
 export interface SuppressionZone {
   id: string;
   geojson: GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.FeatureCollection | GeoJSON.Feature;
+  visual_geojson?: GeoJSON.Geometry | GeoJSON.FeatureCollection | GeoJSON.Feature;
   effectiveness: number;
   resource_type: string;
 }
@@ -62,6 +63,8 @@ export interface MapState {
     type: string;
     from: [number, number];
     to: [number, number];
+    path?: [number, number][];
+    durationMs?: number;
     startedAt: number;
   }>;
   recentActions: MapActionPulse[];
@@ -98,7 +101,7 @@ export type MapAction =
   | { type: 'SET_THREAT_ZONE'; zoneId: string; level: 'extreme' | 'high' | 'moderate' }
   | { type: 'ADD_ALERT'; zone_ids: string[]; message: string; channel: string }
   | { type: 'SET_PARTICLES'; particles: Array<[number, number]> }
-  | { type: 'ADD_RESOURCE_DISPATCH'; dispatch: { id: string; type: string; from: [number, number]; to: [number, number]; startedAt: number } }
+  | { type: 'ADD_RESOURCE_DISPATCH'; dispatch: { id: string; type: string; from: [number, number]; to: [number, number]; path?: [number, number][]; durationMs?: number; startedAt: number } }
   | { type: 'PRUNE_RESOURCE_DISPATCHES'; olderThan: number }
   | { type: 'ADD_RECENT_ACTION'; action: MapActionPulse }
   | { type: 'EXPIRE_RECENT_ACTIONS'; olderThan: number }
@@ -168,16 +171,30 @@ function mapReducer(state: MapState, action: MapAction): MapState {
       };
 
     case 'DEPLOY_RESOURCE': {
-      const keyOf = (r: { type: string; location: [number, number] }) =>
-        `${r.type}@${r.location[0].toFixed(4)},${r.location[1].toFixed(4)}`;
       const incoming = { type: action.resourceType, location: action.location, count: action.count };
-      const idx = state.resources.findIndex(r => keyOf(r) === keyOf(incoming));
-      if (idx >= 0) {
-        const next = state.resources.slice();
-        next[idx] = incoming;
-        return { ...state, resources: next };
-      }
-      return { ...state, resources: [...state.resources, incoming] };
+      const isDozer = incoming.type.toLowerCase().includes('dozer');
+      const mergeDistanceKm = isDozer ? 0.03 : 0.04;
+      const maxVisibleByType = isDozer ? 18 : 36;
+      const distanceKm = (a: [number, number], b: [number, number]) => {
+        const latKm = (b[1] - a[1]) * 111.32;
+        const lngKm = (b[0] - a[0]) * 111.32 * Math.cos(((a[1] + b[1]) / 2) * Math.PI / 180);
+        return Math.sqrt(latKm * latKm + lngKm * lngKm);
+      };
+      const idx = state.resources.findIndex(r =>
+        r.type === incoming.type && distanceKm(r.location, incoming.location) <= mergeDistanceKm
+      );
+      const merged = state.resources.slice();
+      if (idx >= 0) merged[idx] = incoming;
+      else merged.push(incoming);
+
+      const sameType = merged.filter(r => r.type === incoming.type);
+      let overflow = Math.max(0, sameType.length - maxVisibleByType);
+      const next = merged.filter((r) => {
+        if (r.type !== incoming.type || overflow <= 0) return true;
+        overflow -= 1;
+        return false;
+      });
+      return { ...state, resources: next };
     }
 
     case 'SET_INFRASTRUCTURE':

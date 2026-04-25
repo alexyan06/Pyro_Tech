@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const turf = require('@turf/turf');
 const { loadAllData } = require('../data/loader');
 const { synthesize } = require('../voice/elevenlabs');
 const { computeCongestion } = require('../simulation/trafficModel');
@@ -370,22 +371,30 @@ class TurnSequencer {
     const mapEvents = agent.extractMapEvents(fullText);
     for (let i = 0; i < mapEvents.length; i++) {
       const event = mapEvents[i];
-      if (event.type === 'deploy_resource') {
-        this._normalizeResourceDeployment(event, i);
+      const eventsToApply = event.type === 'deploy_resource'
+        ? this._expandResourceDeployment(event, i, elapsedHours)
+        : [event];
+
+      for (let j = 0; j < eventsToApply.length; j++) {
+        const expandedEvent = eventsToApply[j];
+        if (expandedEvent.type === 'deploy_resource') {
+          this._normalizeResourceDeployment(expandedEvent, i + j);
+          this._attachDispatchPlan(expandedEvent, elapsedHours);
+        }
+        const enrichedEvent = {
+          ...expandedEvent,
+          ui_message: expandedEvent.ui_message || this._defaultUiMessage(expandedEvent),
+          action_id: expandedEvent.action_id || `${agent.name}-${tick}-${i}-${j}-${expandedEvent.type}`,
+          source_agent: agent.name,
+          action_location: expandedEvent.action_location || this._actionLocationForEvent(expandedEvent),
+          agent: agent.name,
+          tick,
+          elapsed_hours: elapsedHours,
+        };
+        const derivedEvents = this.stateManager.applyEvent(enrichedEvent) || [];
+        this._sendMapEvent(ws, agent.name, enrichedEvent, tick);
+        this._sendDerivedMapEvents(ws, agent.name, enrichedEvent, derivedEvents, tick, elapsedHours);
       }
-      const enrichedEvent = {
-        ...event,
-        ui_message: event.ui_message || this._defaultUiMessage(event),
-        action_id: event.action_id || `${agent.name}-${tick}-${i}-${event.type}`,
-        source_agent: agent.name,
-        action_location: event.action_location || this._actionLocationForEvent(event),
-        agent: agent.name,
-        tick,
-        elapsed_hours: elapsedHours,
-      };
-      const derivedEvents = this.stateManager.applyEvent(enrichedEvent) || [];
-      this._sendMapEvent(ws, agent.name, enrichedEvent, tick);
-      this._sendDerivedMapEvents(ws, agent.name, enrichedEvent, derivedEvents, tick, elapsedHours);
     }
 
     this.stateManager.state.agent_transcripts.push({
@@ -417,68 +426,270 @@ class TurnSequencer {
     const neededTypes = ['engine', 'dozer'].filter(type => !emittedTypes.has(type));
     if (neededTypes.length === 0) return;
 
-    neededTypes.forEach((type, index) => {
-      const target = this._resourceStagingPoint(type, index);
-      const station = this._nearestFireStation(target);
-      const event = {
-        type: 'deploy_resource',
-        resource_type: type,
-        location: target,
-        count: type === 'dozer' ? 2 : 8,
-        assignment: type === 'dozer' ? 'Cut containment line at the fire edge' : 'Engine strike team staging at the fire edge',
-        from_station_id: station.id,
-        from_location: [station.lng, station.lat],
-        ui_message: type === 'dozer' ? '2 dozers dispatched to fire line' : '8 engines dispatched to fire line',
-        action_id: `resource-${tick}-guaranteed-${type}`,
-        source_agent: 'resource',
-        action_location: target,
-        agent: 'resource',
-        tick,
-        elapsed_hours: elapsedHours,
-      };
-      const derivedEvents = this.stateManager.applyEvent(event) || [];
-      this._sendMapEvent(ws, 'resource', event, tick);
-      this._sendDerivedMapEvents(ws, 'resource', event, derivedEvents, tick, elapsedHours);
+    neededTypes.forEach((type) => {
+      const deployments = this._plannedResourceDeployments(type, elapsedHours);
+      deployments.forEach((deployment, index) => {
+        const event = {
+          type: 'deploy_resource',
+          resource_type: type,
+          location: deployment.location,
+          count: deployment.count,
+          assignment: type === 'dozer' ? 'Cut containment line at the fire edge' : 'Engine strike team staging at the fire edge',
+          from_station_id: deployment.station.id,
+          from_location: [deployment.station.lng, deployment.station.lat],
+          ui_message: type === 'dozer' ? `${deployment.count} dozers dispatched to fire line` : `${deployment.count} engines dispatched to fire line`,
+          action_id: `resource-${tick}-guaranteed-${type}-${index}`,
+          source_agent: 'resource',
+          action_location: deployment.location,
+          agent: 'resource',
+          tick,
+          elapsed_hours: elapsedHours,
+          _unit_index: index,
+        };
+        this._attachDispatchPlan(event, elapsedHours);
+        const derivedEvents = this.stateManager.applyEvent(event) || [];
+        this._sendMapEvent(ws, 'resource', event, tick);
+        this._sendDerivedMapEvents(ws, 'resource', event, derivedEvents, tick, elapsedHours);
+      });
     });
+  }
+
+  _expandResourceDeployment(event, index, elapsedHours) {
+    const rawType = String(event.resource_type || '').toLowerCase();
+    const resourceType = rawType.includes('dozer') ? 'dozer' : 'engine';
+    const deployments = this._plannedResourceDeployments(resourceType, elapsedHours, Number(event.count) || null);
+    return deployments.map((deployment, deploymentIndex) => ({
+      ...event,
+      resource_type: resourceType,
+      location: deployment.location,
+      count: deployment.count,
+      from_station_id: deployment.station.id,
+      from_location: [deployment.station.lng, deployment.station.lat],
+      action_id: event.action_id ? `${event.action_id}-${deploymentIndex}` : undefined,
+      action_location: deployment.location,
+      ui_message: resourceType === 'dozer'
+        ? `${deployment.count} dozers cutting line near the head`
+        : `${deployment.count} engines deployed around the flank`,
+      _staged: true,
+      _staging_index: index + deploymentIndex,
+      _unit_index: deploymentIndex,
+    }));
   }
 
   _normalizeResourceDeployment(event, index = 0) {
     const rawType = String(event.resource_type || '').toLowerCase();
     event.resource_type = rawType.includes('dozer') ? 'dozer' : 'engine';
 
-    if (!Array.isArray(event.location) || event.location.length !== 2) {
+    // Backend geometry is the source of truth for staging. This keeps dozers
+    // around the head and engines spread across the flanks.
+    if (!event._staged) {
       event.location = this._resourceStagingPoint(event.resource_type, index);
     }
 
-    if (!Array.isArray(event.from_location) || event.from_location.length !== 2) {
+    const fromInFire = Array.isArray(event.from_location) &&
+      event.from_location.length === 2 &&
+      this._isLocationInFire(event.from_location);
+
+    if (!Array.isArray(event.from_location) || event.from_location.length !== 2 || fromInFire) {
       const station = this._nearestFireStation(event.location);
-      event.from_station_id = event.from_station_id || station.id;
+      event.from_station_id = station.id;
       event.from_location = [station.lng, station.lat];
     }
 
-    event.count = Math.max(1, Number(event.count) || (event.resource_type === 'dozer' ? 2 : 8));
+    const fallbackCount = this._resourceCountFor(event.resource_type, event.elapsed_hours ?? this._lastElapsedHours);
+    event.count = event._staged
+      ? Math.max(1, Number(event.count) || 1)
+      : Math.max(1, Number(event.count) || fallbackCount, fallbackCount);
+  }
+
+  _plannedResourceDeployments(resourceType, elapsedHours = 0, requestedCount = null) {
+    const totalCount = Math.max(1, Number(requestedCount) || this._resourceCountFor(resourceType, elapsedHours));
+    const maxUnits = resourceType === 'dozer' ? 18 : 36;
+    const units = Math.min(maxUnits, totalCount);
+    const usedStations = new Set();
+
+    return Array.from({ length: units }, (_, index) => {
+      const location = this._resourceStagingPoint(resourceType, index);
+      const station = this._nearestFireStation(location, usedStations);
+      if (usedStations.size < 8) usedStations.add(station.id);
+      return {
+        location,
+        station,
+        count: 1,
+      };
+    });
+  }
+
+  _attachDispatchPlan(event, elapsedHours) {
+    if (!Array.isArray(event.from_location) || !Array.isArray(event.location)) return;
+    const path = this._buildResourceDispatchPath(event.from_location, event.location);
+    const distanceKm = this._pathDistanceKm(path);
+    const unitIndex = Number(event._unit_index ?? event._staging_index ?? 0) || 0;
+    const travelHours = this._travelHoursForResource(event.resource_type, distanceKm) + unitIndex * 0.012;
+    event.dispatch_path = path;
+    event.dispatch_distance_km = Number(distanceKm.toFixed(2));
+    event.travel_hours = Number(travelHours.toFixed(2));
+    event.arrival_elapsed_hours = Number((Number(elapsedHours || 0) + travelHours).toFixed(3));
+  }
+
+  _buildResourceDispatchPath(from, to) {
+    const direct = [from, to];
+    if (!this._pathIntersectsFire(direct)) return direct;
+
+    const perim = this.stateManager.state.fire.perimeter_geojson?.features?.[0];
+    const bbox = perim ? turf.bbox(perim) : null;
+    if (!bbox) return direct;
+
+    const pad = 0.035;
+    const [west, south, east, north] = bbox;
+    const candidates = [
+      [from, [from[0], north + pad], [to[0], north + pad], to],
+      [from, [from[0], south - pad], [to[0], south - pad], to],
+      [from, [west - pad, from[1]], [west - pad, to[1]], to],
+      [from, [east + pad, from[1]], [east + pad, to[1]], to],
+      [from, [west - pad, from[1]], [west - pad, north + pad], [to[0], north + pad], to],
+      [from, [east + pad, from[1]], [east + pad, north + pad], [to[0], north + pad], to],
+      [from, [west - pad, from[1]], [west - pad, south - pad], [to[0], south - pad], to],
+      [from, [east + pad, from[1]], [east + pad, south - pad], [to[0], south - pad], to],
+    ];
+
+    const valid = candidates
+      .map(path => this._dedupePath(path))
+      .filter(path => !this._pathIntersectsFire(path))
+      .sort((a, b) => this._pathDistanceKm(a) - this._pathDistanceKm(b));
+
+    if (valid[0]) return valid[0];
+
+    for (const multiplier of [1.8, 2.6, 3.5]) {
+      const widePad = pad * multiplier;
+      const wideCandidates = [
+        [from, [from[0], north + widePad], [to[0], north + widePad], to],
+        [from, [from[0], south - widePad], [to[0], south - widePad], to],
+        [from, [west - widePad, from[1]], [west - widePad, to[1]], to],
+        [from, [east + widePad, from[1]], [east + widePad, to[1]], to],
+      ]
+        .map(path => this._dedupePath(path))
+        .filter(path => !this._pathIntersectsFire(path))
+        .sort((a, b) => this._pathDistanceKm(a) - this._pathDistanceKm(b));
+      if (wideCandidates[0]) return wideCandidates[0];
+    }
+
+    return this._dedupePath([from, [west - pad, north + pad], [east + pad, north + pad], to]);
+  }
+
+  _pathIntersectsFire(pathCoords) {
+    const perim = this.stateManager.state.fire.perimeter_geojson?.features?.[0];
+    if (!perim || !Array.isArray(pathCoords) || pathCoords.length < 2) return false;
+    try {
+      const buffered = turf.buffer(perim, 0.15, { units: 'kilometers' });
+      const line = turf.lineString(pathCoords);
+      return turf.booleanIntersects(line, buffered) ||
+        pathCoords.some(coord => turf.booleanPointInPolygon(turf.point(coord), buffered));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  _pathDistanceKm(pathCoords) {
+    if (!Array.isArray(pathCoords) || pathCoords.length < 2) return 0;
+    let total = 0;
+    for (let i = 1; i < pathCoords.length; i++) {
+      total += this._distanceKm(pathCoords[i - 1], pathCoords[i]);
+    }
+    return total;
+  }
+
+  _travelHoursForResource(resourceType, distanceKm) {
+    const speedKph = resourceType === 'dozer' ? 18 : 42;
+    const setupHours = resourceType === 'dozer' ? 0.18 : 0.08;
+    return Math.max(0.05, distanceKm / speedKph + setupHours);
+  }
+
+  _dedupePath(pathCoords) {
+    return pathCoords.filter((coord, index, path) => {
+      if (index === 0) return true;
+      return this._distanceKm(coord, path[index - 1]) > 0.005;
+    });
   }
 
   _resourceStagingPoint(resourceType, index = 0) {
     const fireFeature = this.stateManager.state.fire.perimeter_geojson?.features?.[0];
     const props = fireFeature?.properties || {};
-    if (resourceType === 'dozer' && Array.isArray(props.head_position)) {
-      return props.head_position;
+    const windBearing = props.wind_bearing || this.stateManager.state.fire.spread_bearing || 0;
+    const perimeterReady = fireFeature?.geometry?.type === 'Polygon';
+
+    if (resourceType === 'dozer' && perimeterReady) {
+      const offsets = [0, 8, -8, 16, -16, 24, -24, 32, -32, 40, -40, 48, -48, 56, -56, 64, -64, 72];
+      const bearing = (windBearing + offsets[index % offsets.length] + 360) % 360;
+      const edge = this._perimeterPointAtBearing(fireFeature, bearing);
+      if (edge) return this._pointAtBearingAndDistance(edge, bearing, 0.55 + Math.floor(index / offsets.length) * 0.12);
     }
-    if (resourceType === 'engine' && Array.isArray(props.center_position)) {
-      const bearing = ((props.wind_bearing || this.stateManager.state.fire.spread_bearing || 0) + 95 + index * 20) % 360;
-      return this._pointAtBearingAndDistance(props.center_position, bearing, 0.75);
+
+    if (resourceType === 'engine' && perimeterReady) {
+      const flankOffsets = [90, -90, 105, -105, 75, -75, 120, -120, 60, -60, 135, -135, 45, -45, 150, -150];
+      const bearing = (windBearing + flankOffsets[index % flankOffsets.length] + 360) % 360;
+      const edge = this._perimeterPointAtBearing(fireFeature, bearing);
+      if (edge) return this._pointAtBearingAndDistance(edge, bearing, 0.5 + Math.floor(index / flankOffsets.length) * 0.08);
     }
 
     const origin = this.stateManager.state.scenario?.fireOrigin;
     const base = origin ? [origin.lng, origin.lat] : [-118.24, 34.05];
-    const bearing = ((this.stateManager.state.fire.spread_bearing || 45) + (resourceType === 'dozer' ? 0 : 100) + index * 20) % 360;
-    return this._pointAtBearingAndDistance(base, bearing, resourceType === 'dozer' ? 1.4 : 0.9);
+    const bearing = (windBearing + (resourceType === 'dozer' ? 0 : 100) + index * 20) % 360;
+    return this._pointAtBearingAndDistance(base, bearing, resourceType === 'dozer' ? 2.0 : 1.2);
   }
 
-  _nearestFireStation(target) {
+  _resourceCountFor(resourceType, elapsedHours = 0) {
+    const acres = Number(this.stateManager.state.fire.acres_burned) || 0;
+    const hours = Math.max(0, Number(elapsedHours) || 0);
+    if (resourceType === 'dozer') {
+      return Math.min(24, Math.max(2, Math.ceil(acres / 350) + Math.ceil(hours / 2)));
+    }
+    return Math.min(80, Math.max(8, Math.ceil(acres / 80) + Math.ceil(hours * 2)));
+  }
+
+  _perimeterPointAtBearing(feature, bearingDeg) {
+    const origin = this._fireOriginLngLat(feature);
+    const ring = feature?.geometry?.coordinates?.[0] || [];
+    if (!origin || ring.length === 0) return null;
+
+    let best = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+    for (const coord of ring) {
+      if (!Array.isArray(coord) || coord.length < 2) continue;
+      const coordBearing = this._bearing(origin, coord);
+      const score = this._angularDistance(coordBearing, bearingDeg);
+      if (score < bestScore) {
+        bestScore = score;
+        best = coord;
+      }
+    }
+    return best;
+  }
+
+  _fireOriginLngLat(feature) {
+    const props = feature?.properties || {};
+    if (Array.isArray(props.origin)) return props.origin;
+    const origin = this.stateManager.state.scenario?.fireOrigin;
+    return origin ? [origin.lng, origin.lat] : null;
+  }
+
+  _isLocationInFire(lngLat) {
+    const perimeter = this.stateManager.state.fire.perimeter_geojson;
+    if (!perimeter?.features?.length) return false;
+    try {
+      const turf = require('@turf/turf');
+      const point = turf.point(lngLat);
+      return perimeter.features.some(feature => {
+        try { return turf.booleanPointInPolygon(point, feature); } catch (_) { return false; }
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
+  _nearestFireStation(target, excludeIds = new Set()) {
     const infra = this.stateManager.state.baseData?.infrastructure || {};
-    const stations = Object.entries(infra)
+    const allStations = Object.entries(infra)
       .filter(([, value]) => value?.type === 'fire_station' && value.location)
       .map(([id, value]) => ({
         id,
@@ -486,11 +697,23 @@ class TurnSequencer {
         lng: Number(value.location.lng),
         lat: Number(value.location.lat),
       }))
-      .filter(station => Number.isFinite(station.lng) && Number.isFinite(station.lat));
+      .filter(station => Number.isFinite(station.lng) && Number.isFinite(station.lat))
+      .filter(station => !this._isLocationInFire([station.lng, station.lat]));
+    const stations = allStations.filter(station => !excludeIds.has(station.id));
 
-    if (stations.length > 0) {
-      return stations
-        .map(station => ({ ...station, dist: Math.hypot(station.lng - target[0], station.lat - target[1]) }))
+    const candidates = stations.length > 0 ? stations : allStations;
+    if (candidates.length > 0) {
+      return candidates
+        .map(station => {
+          const from = [station.lng, station.lat];
+          const directPath = [from, target];
+          const routePath = this._buildResourceDispatchPath(from, target);
+          const crossesFire = this._pathIntersectsFire(directPath);
+          return {
+            ...station,
+            dist: this._pathDistanceKm(routePath) + (crossesFire ? 3 : 0),
+          };
+        })
         .sort((a, b) => a.dist - b.dist)[0];
     }
 
@@ -520,6 +743,31 @@ class TurnSequencer {
       Number((lng2 * 180 / Math.PI).toFixed(6)),
       Number((lat2 * 180 / Math.PI).toFixed(6)),
     ];
+  }
+
+  _distanceKm(a, b) {
+    const R = 6371;
+    const dLat = (b[1] - a[1]) * Math.PI / 180;
+    const dLng = (b[0] - a[0]) * Math.PI / 180;
+    const lat1 = a[1] * Math.PI / 180;
+    const lat2 = b[1] * Math.PI / 180;
+    const h = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  }
+
+  _bearing(from, to) {
+    const lat1 = from[1] * Math.PI / 180;
+    const lat2 = to[1] * Math.PI / 180;
+    const deltaLng = (to[0] - from[0]) * Math.PI / 180;
+    const y = Math.sin(deltaLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) -
+      Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  }
+
+  _angularDistance(angleA, angleB) {
+    return Math.abs(((angleA - angleB + 540) % 360) - 180);
   }
 
   _defaultUiMessage(event) {
@@ -581,8 +829,21 @@ class TurnSequencer {
         tick,
         elapsed_hours: elapsedHours,
       };
-      this._sendMapEvent(ws, agentName, enriched, tick);
+      const activeAfter = Number(enriched.active_after_elapsed_hours);
+      if (enriched.type === 'suppression_zone' && Number.isFinite(activeAfter) && activeAfter > elapsedHours) {
+        const delayMs = this._simHoursToWallMs(activeAfter - elapsedHours);
+        setTimeout(() => {
+          if (!this.stopped) this._sendMapEvent(ws, agentName, enriched, tick);
+        }, delayMs);
+      } else {
+        this._sendMapEvent(ws, agentName, enriched, tick);
+      }
     }
+  }
+
+  _simHoursToWallMs(hours) {
+    const cycleHours = LOGICAL_MINUTES_PER_CYCLE / 60;
+    return Math.max(0, Math.round((Number(hours) || 0) / cycleHours * DEMO_AGENT_CYCLE_MS));
   }
 
   /**

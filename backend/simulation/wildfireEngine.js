@@ -28,6 +28,10 @@ class WildfireEngine {
     this.pm25        = weatherExtras.pm25        ?? 15;
     this.initialAcres = Math.max(0, Number(weatherExtras.initialAcres) || 0);
     this.seed        = this._seedFromPoint(ignitionPoint);
+    this.sectorCount = 72;
+    this._sectorDistancesKm = null;
+    this._sectorBearingsDeg = null;
+    this._lastPerimeterTick = null;
   }
 
   /**
@@ -79,8 +83,10 @@ class WildfireEngine {
     const backFire  = growthRate * 0.3; // upwind   — slowest
     const flankFire = growthRate * 0.7; // crosswind
 
-    const numPoints = 72;
+    const numPoints = this.sectorCount;
     const coordinates = [];
+    const nextSectorDistances = new Array(numPoints);
+    const nextSectorBearings = new Array(numPoints);
     const windRad = (this.windBearing * Math.PI) / 180;
     const center = this._pointAtBearingAndDistance(
       this.ignition,
@@ -109,22 +115,53 @@ class WildfireEngine {
       const windAlignment = Math.max(0, cos);
       const rawRadius = Math.max(
         0.02,
-        baseRadius * turbulence + canyonChannel * spreadGrowthKm * (0.35 + windAlignment * 0.55),
+        baseRadius * turbulence + canyonChannel * spreadGrowthKm * (0.16 + windAlignment * 0.28),
       );
       const projectedPoint = this._pointAtBearingAndDistance(center, angleDeg, rawRadius);
-      const suppression = this._suppressionDamping(projectedPoint, angleDeg, tick, suppressionZones, zoneCenters);
-      const radius = Math.max(
+      const rawBearing = this._bearing(this.ignition, projectedPoint);
+      const rawDistanceKm = Math.max(0.02, this._distanceKm(this.ignition, projectedPoint));
+      const previousDistanceKm = this._previousSectorDistance(i, tick);
+      const previousBearing = this._sectorBearingsDeg?.[i];
+      const growthDeltaKm = Math.max(0, rawDistanceKm - previousDistanceKm);
+      const suppressionProbeDistanceKm = Math.min(rawDistanceKm, previousDistanceKm + Math.min(growthDeltaKm, 0.35));
+      const suppressionProbe = this._pointAtBearingAndDistance(this.ignition, rawBearing, suppressionProbeDistanceKm);
+      const suppression = this._suppressionDamping(suppressionProbe, rawBearing, tick, suppressionZones, zoneCenters);
+      const containmentLimitKm = this._containmentLimitDistance(
+        rawBearing,
+        previousDistanceKm,
+        rawDistanceKm,
+        tick,
+        suppressionZones,
+        zoneCenters,
+      );
+      const growthKm = growthDeltaKm * this._growthMultiplierForSuppression(suppression);
+      const uncappedDistanceKm = previousDistanceKm + growthKm;
+      const distanceKm = Math.max(
         0.02,
-        rawRadius * (1 - suppression) - growthRate * suppression * 0.12,
+        Number.isFinite(containmentLimitKm)
+          ? Math.min(uncappedDistanceKm, containmentLimitKm)
+          : uncappedDistanceKm,
       );
+      const bearing = growthKm <= 0.00001 && Number.isFinite(previousBearing)
+        ? previousBearing
+        : rawBearing;
 
-      coordinates.push(
-        this._pointAtBearingAndDistance(center, angleDeg, radius)
-      );
+      nextSectorDistances[i] = distanceKm;
+      nextSectorBearings[i] = bearing;
+      coordinates.push(this._pointAtBearingAndDistance(this.ignition, bearing, distanceKm));
     }
 
+    this._sectorDistancesKm = nextSectorDistances;
+    this._sectorBearingsDeg = nextSectorBearings;
+    this._lastPerimeterTick = tick;
+
+    const smoothedCoordinates = this._smoothPerimeterCoordinates(coordinates, suppressionZones, tick, zoneCenters);
+
     // Close the polygon
+    coordinates.length = 0;
+    coordinates.push(...smoothedCoordinates);
     coordinates.push(coordinates[0]);
+    const headPosition = this._leadingEdgePoint(coordinates, this.windBearing, this.ignition);
 
     let acresBurned  = Math.round(Math.PI * headFire * flankFire * 247.105);
     const spreadRateAc = Math.round(spreadGrowthKm * 247.105);
@@ -141,9 +178,10 @@ class WildfireEngine {
         temperature:       this.temperature,
         pm25:              this.pm25,
         origin:            this.ignition,
-        head_position:     this._pointAtBearingAndDistance(center, this.windBearing, headFire),
+        head_position:     headPosition,
         center_position:   center,
         irregularity:      true,
+        stateful_growth:   true,
         suppression_active: this._activeSuppressionZones(suppressionZones, tick).length > 0,
       },
       geometry: {
@@ -182,11 +220,26 @@ class WildfireEngine {
         ? feature.properties.center_position
         : this._zoneCenter({ geojson: feature });
       if (!center) return feature;
+      const origin = Array.isArray(feature.properties?.origin)
+        ? feature.properties.origin
+        : this.ignition;
 
       const coordinates = feature.geometry.coordinates.map((ring) => ring.map((coord) => {
         if (!Array.isArray(coord) || coord.length < 2) return coord;
         const point = [coord[0], coord[1]];
-        const bearing = this._bearing(center, point);
+        const bearing = this._bearing(origin, point);
+        const distanceKm = this._distanceKm(origin, point);
+        const containmentLimitKm = this._containmentLimitDistance(
+          bearing,
+          0.02,
+          distanceKm,
+          tick,
+          suppressionZones,
+          zoneCenters,
+        );
+        if (Number.isFinite(containmentLimitKm) && containmentLimitKm < distanceKm) {
+          return this._pointAtBearingAndDistance(origin, bearing, containmentLimitKm);
+        }
         const damping = this._suppressionDamping(point, bearing, tick, suppressionZones, zoneCenters);
         return damping > 0 ? this._pullToward(point, center, damping * 0.42) : point;
       }));
@@ -225,11 +278,11 @@ class WildfireEngine {
   _edgeTurbulence(angleDeg, tick) {
     const a = angleDeg * Math.PI / 180;
     const phase = tick * 0.85;
-    const broad = Math.sin(a * 3 + phase + this.seed * 0.001) * 0.16;
-    const medium = Math.sin(a * 7 - phase * 1.7 + this.seed * 0.003) * 0.10;
-    const fine = (this._noise(angleDeg * 0.17 + Math.floor(tick * 3)) - 0.5) * 0.12;
-    const windAmp = Math.min(0.18, this.windSpeed / 260);
-    return Math.max(0.68, Math.min(1.42, 1 + broad + medium + fine + windAmp));
+    const broad = Math.sin(a * 3 + phase + this.seed * 0.001) * 0.07;
+    const medium = Math.sin(a * 7 - phase * 1.7 + this.seed * 0.003) * 0.04;
+    const fine = (this._noise(angleDeg * 0.17 + Math.floor(tick * 3)) - 0.5) * 0.04;
+    const windAmp = Math.min(0.08, this.windSpeed / 520);
+    return Math.max(0.84, Math.min(1.18, 1 + broad + medium + fine + windAmp));
   }
 
   _canyonChannel(angleDeg, tick) {
@@ -241,7 +294,7 @@ class WildfireEngine {
     const pulse = 0.5 + 0.5 * Math.sin(tick * 1.15 + this.seed * 0.002);
     const strengthA = this._angularFalloff(angleDeg, channelA, width) * pulse;
     const strengthB = this._angularFalloff(angleDeg, channelB, width * 0.8) * (1 - pulse * 0.45);
-    return Math.max(strengthA, strengthB);
+    return Math.max(strengthA, strengthB) * 0.35;
   }
 
   _angularFalloff(angleA, angleB, width) {
@@ -256,6 +309,148 @@ class WildfireEngine {
       const activeAfter = Number(zone.active_after_elapsed_hours ?? zone.created_elapsed_hours ?? 0);
       return tick >= activeAfter;
     });
+  }
+
+  _previousSectorDistance(index, tick) {
+    if (
+      !this._sectorDistancesKm ||
+      this._sectorDistancesKm.length !== this.sectorCount ||
+      (this._lastPerimeterTick != null && tick < this._lastPerimeterTick)
+    ) {
+      return 0.02;
+    }
+    const distance = this._sectorDistancesKm[index];
+    return Number.isFinite(distance) ? Math.max(0.02, distance) : 0.02;
+  }
+
+  _growthMultiplierForSuppression(suppression) {
+    const holdThreshold = 0.62;
+    if (suppression >= holdThreshold) return 0;
+    return Math.max(0, 1 - suppression / holdThreshold);
+  }
+
+  _containmentLimitDistance(bearingDeg, previousDistanceKm, rawDistanceKm, tick, suppressionZones, precomputedCenters) {
+    let limit = Number.POSITIVE_INFINITY;
+
+    for (let zi = 0; zi < suppressionZones.length; zi++) {
+      const zone = suppressionZones[zi];
+      const center = precomputedCenters
+        ? precomputedCenters[zi]
+        : (Array.isArray(zone.center) ? zone.center : this._zoneCenter(zone));
+      if (!center) continue;
+
+      const activeAfter = Number(zone.active_after_elapsed_hours ?? zone.created_elapsed_hours ?? 0);
+      const ageHours = tick - activeAfter;
+      if (ageHours <= 0) continue;
+
+      const rampHours = Math.max(0.05, Number(zone.ramp_hours) || (zone.type === 'dozer' ? 0.65 : 0.45));
+      const progress = this._smoothstep(Math.max(0, Math.min(1, ageHours / rampHours)));
+      const minProgress = zone.type === 'dozer' ? 0.35 : 0.55;
+      if (progress < minProgress) continue;
+
+      const zoneBearing = Number.isFinite(Number(zone.bearing_deg))
+        ? Number(zone.bearing_deg)
+        : this._bearing(this.ignition, center);
+      const sectorWidth = Number(zone.sector_degrees) || (zone.type === 'dozer' ? 58 : 90);
+      const angularDistance = this._angularDistance(bearingDeg, zoneBearing);
+      const angularReach = zone.type === 'dozer' ? sectorWidth * 0.9 : sectorWidth * 0.55;
+      if (angularDistance > angularReach) continue;
+
+      const radiusKm = Math.max(0.1, Number(zone.radius_km) || (zone.type === 'dozer' ? 1.2 : 0.8));
+      const centerDistanceKm = this._distanceKm(this.ignition, center);
+      const deltaRad = angularDistance * Math.PI / 180;
+      const projectedLineDistanceKm = centerDistanceKm * Math.cos(deltaRad);
+      if (!Number.isFinite(projectedLineDistanceKm)) continue;
+      if (zone.type !== 'dozer' && projectedLineDistanceKm <= previousDistanceKm + 0.03) continue;
+      if (zone.type === 'dozer' && projectedLineDistanceKm < previousDistanceKm - radiusKm * 1.25) continue;
+      if (projectedLineDistanceKm > rawDistanceKm + radiusKm * 0.65) continue;
+
+      const factor = Number(zone.factor) || (zone.type === 'dozer' ? 0.88 : 0.52);
+      const maturity = Math.max(0.65, progress);
+      const holdingPower = Math.min(1, factor * maturity);
+      const bufferBehindLine = zone.type === 'dozer'
+        ? Math.max(0.18, Math.min(1.1, Number(zone.cut_depth_km) || 0.75))
+        : Math.max(0.05, 0.18 * (1 - holdingPower));
+      const candidate = projectedLineDistanceKm - bufferBehindLine;
+      limit = Math.min(limit, candidate);
+    }
+
+    return limit;
+  }
+
+  _leadingEdgePoint(coordinates, bearingDeg, origin) {
+    let best = null;
+    let bestDelta = Number.POSITIVE_INFINITY;
+    let bestProjection = Number.NEGATIVE_INFINITY;
+    for (const coord of coordinates || []) {
+      if (!Array.isArray(coord) || coord.length < 2) continue;
+      const distanceKm = this._distanceKm(origin, coord);
+      const coordBearing = this._bearing(origin, coord);
+      const delta = this._angularDistance(coordBearing, bearingDeg);
+      const deltaRad = delta * Math.PI / 180;
+      const projection = distanceKm * Math.cos(deltaRad);
+      if (delta < bestDelta || (Math.abs(delta - bestDelta) < 0.001 && projection > bestProjection)) {
+        bestDelta = delta;
+        bestProjection = projection;
+        best = coord;
+      }
+    }
+    return best || this._pointAtBearingAndDistance(origin, bearingDeg, 0.02);
+  }
+
+  _smoothPerimeterCoordinates(coordinates, suppressionZones, tick, zoneCenters) {
+    if (!Array.isArray(coordinates) || coordinates.length < 5) return coordinates;
+    const origin = this.ignition;
+    const bearings = coordinates.map(coord => this._bearing(origin, coord));
+    const distances = coordinates.map(coord => this._distanceKm(origin, coord));
+    const smoothed = [];
+
+    for (let i = 0; i < coordinates.length; i++) {
+      const bearing = bearings[i];
+      const dozerInfluence = this._dozerCutInfluence(bearing, tick, suppressionZones, zoneCenters);
+      const maxSpikeDelta = dozerInfluence > 0 ? 0.7 : 0.22;
+      const smoothingWeight = dozerInfluence > 0 ? 0.46 : 0.78;
+
+      const prev2 = distances[(i - 2 + distances.length) % distances.length];
+      const prev1 = distances[(i - 1 + distances.length) % distances.length];
+      const current = distances[i];
+      const next1 = distances[(i + 1) % distances.length];
+      const next2 = distances[(i + 2) % distances.length];
+      const neighborAvg = (prev2 + prev1 * 2 + current * 3 + next1 * 2 + next2) / 9;
+      let distance = current * (1 - smoothingWeight) + neighborAvg * smoothingWeight;
+
+      const localMax = Math.max(prev1, next1) + maxSpikeDelta;
+      const localMin = Math.max(0.02, Math.min(prev1, next1) - (dozerInfluence > 0 ? 0.75 : 0.3));
+      distance = Math.max(localMin, Math.min(localMax, distance));
+      smoothed.push(this._pointAtBearingAndDistance(origin, bearing, distance));
+    }
+
+    return smoothed;
+  }
+
+  _dozerCutInfluence(bearingDeg, tick, suppressionZones, precomputedCenters) {
+    let influence = 0;
+    for (let zi = 0; zi < suppressionZones.length; zi++) {
+      const zone = suppressionZones[zi];
+      if (zone.type !== 'dozer') continue;
+      const center = precomputedCenters
+        ? precomputedCenters[zi]
+        : (Array.isArray(zone.center) ? zone.center : this._zoneCenter(zone));
+      if (!center) continue;
+      const activeAfter = Number(zone.active_after_elapsed_hours ?? zone.created_elapsed_hours ?? 0);
+      const ageHours = tick - activeAfter;
+      if (ageHours <= 0) continue;
+      const rampHours = Math.max(0.05, Number(zone.ramp_hours) || 0.65);
+      const progress = this._smoothstep(Math.max(0, Math.min(1, ageHours / rampHours)));
+      const zoneBearing = Number.isFinite(Number(zone.bearing_deg))
+        ? Number(zone.bearing_deg)
+        : this._bearing(this.ignition, center);
+      const sectorWidth = Number(zone.sector_degrees) || 58;
+      const angular = this._angularDistance(bearingDeg, zoneBearing);
+      if (angular > sectorWidth) continue;
+      influence = Math.max(influence, progress * (1 - angular / sectorWidth));
+    }
+    return influence;
   }
 
   _shoelaceAcres(coords) {
@@ -300,12 +495,13 @@ class WildfireEngine {
       const profile = zone.type === 'dozer'
         ? distanceFalloff * Math.pow(angularFalloff, 0.55)
         : distanceFalloff * (0.65 + angularFalloff * 0.35);
-      const maxStrength = Number(zone.factor) || (zone.type === 'dozer' ? 0.58 : 0.34);
-      const damping = Math.max(0, Math.min(0.72, maxStrength * progress * profile));
+      const maxStrength = Number(zone.factor) || (zone.type === 'dozer' ? 0.88 : 0.52);
+      const perZoneCap = zone.type === 'dozer' ? 0.90 : 0.70;
+      const damping = Math.max(0, Math.min(perZoneCap, maxStrength * progress * profile));
       openFraction *= (1 - damping);
     }
 
-    return Math.max(0, Math.min(0.78, 1 - openFraction));
+    return Math.max(0, Math.min(0.95, 1 - openFraction));
   }
 
   _zoneCenter(zone) {

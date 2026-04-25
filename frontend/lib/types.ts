@@ -217,6 +217,9 @@ export type MapEventData =
       count: number;
       from_station_id?: string;
       from_location?: [number, number];
+      dispatch_path?: [number, number][];
+      travel_hours?: number;
+      arrival_elapsed_hours?: number;
       action_id?: string; ui_message?: string; source_agent?: AgentName;
     }
   | {
@@ -260,6 +263,7 @@ export type MapEventData =
       type: 'suppression_zone';
       resource_type: string;
       geojson: GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.FeatureCollection | GeoJSON.Feature;
+      visual_geojson?: GeoJSON.Geometry | GeoJSON.FeatureCollection | GeoJSON.Feature;
       effectiveness: number;
       source_resource_event_id?: string;
       action_id?: string; ui_message?: string; source_agent?: AgentName;

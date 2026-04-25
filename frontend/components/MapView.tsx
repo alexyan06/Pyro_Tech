@@ -43,6 +43,7 @@ interface DispatchPath {
   id: string;
   type: string;
   path: [number, number][];
+  durationMs: number;
   startedAt: number;
 }
 
@@ -51,6 +52,7 @@ interface ActionPulseData extends MapActionPulse {
 }
 
 type ActionFeature = GeoJSON.Feature<GeoJSON.Geometry, ActionPulseData>;
+type SuppressionFeature = GeoJSON.Feature<GeoJSON.Geometry, { resource_type?: string } & GeoJSON.GeoJsonProperties>;
 
 function payloadValue(payload: MapActionPulse['payload'], key: string): unknown {
   return key in payload ? payload[key as keyof MapActionPulse['payload']] : undefined;
@@ -78,6 +80,10 @@ function actionProgress(feature: unknown): number {
   if (typeof properties !== 'object' || properties === null || !('progress' in properties)) return 0;
   const progress = (properties as { progress?: unknown }).progress;
   return typeof progress === 'number' ? progress : 0;
+}
+
+function suppressionResourceType(feature: SuppressionFeature): string {
+  return String(feature.properties?.resource_type ?? '').toLowerCase();
 }
 
 function routeCoordinates(routes: MapState['routeFeatures']): [number, number][] {
@@ -313,7 +319,8 @@ const MapOverlay = memo(function MapOverlay({
     return dispatches.map(d => ({
       id: d.id,
       type: d.type,
-      path: buildDispatchPath(d.from, d.to, highwayCoords),
+      path: d.path && d.path.length >= 2 ? d.path : buildDispatchPath(d.from, d.to, highwayCoords),
+      durationMs: d.durationMs ?? 24000,
       startedAt: d.startedAt,
     }));
   }, [mapState.resourceDispatches, mapState.routeFeatures]);
@@ -327,10 +334,9 @@ const MapOverlay = memo(function MapOverlay({
 
   const dispatchLayers = useMemo(() => {
     if (dispatchPaths.length === 0) return [];
-    const DURATION_MS = 24000;
     const moving: DispatchMoving[] = dispatchPaths
       .map(d => {
-        const t = Math.min(1, Math.max(0, (wallClockMs - d.startedAt) / DURATION_MS));
+        const t = Math.min(1, Math.max(0, (wallClockMs - d.startedAt) / d.durationMs));
         return { id: d.id, type: d.type, path: d.path, position: interpolatePath(d.path, t), t };
       })
       .filter(d => d.t < 1);
@@ -383,34 +389,41 @@ const MapOverlay = memo(function MapOverlay({
   const suppressionLayer = useMemo(() => {
     const zones = Object.values(mapState.suppressionZones);
     if (zones.length === 0) return null;
-    const features = zones.flatMap((zone): GeoJSON.Feature[] => {
-      if (zone.geojson.type === 'FeatureCollection') {
-        return zone.geojson.features.map((feature) => ({
+    const features = zones.flatMap((zone): SuppressionFeature[] => {
+      const displayGeojson = zone.visual_geojson ?? zone.geojson;
+      if (displayGeojson.type === 'FeatureCollection') {
+        return displayGeojson.features.map((feature) => ({
           ...feature,
           properties: { ...(feature.properties ?? {}), ...zone },
         }));
       }
-      if (zone.geojson.type === 'Feature') {
+      if (displayGeojson.type === 'Feature') {
         return [{
-          ...zone.geojson,
-          properties: { ...(zone.geojson.properties ?? {}), ...zone },
+          ...displayGeojson,
+          properties: { ...(displayGeojson.properties ?? {}), ...zone },
         }];
       }
       return [{
         type: 'Feature',
         properties: zone,
-        geometry: zone.geojson,
+        geometry: displayGeojson,
       }];
     });
 
-    return new GeoJsonLayer<GeoJSON.Feature>({
+    return new GeoJsonLayer<SuppressionFeature>({
       id: 'suppression-zones',
       data: features,
       filled: true,
       stroked: true,
-      getFillColor: [59, 130, 246, 18],
-      getLineColor: [34, 197, 94, 95],
-      getLineWidth: 1.5,
+      getFillColor: (d) => {
+        const type = suppressionResourceType(d);
+        return type.includes('dozer') ? [250, 204, 21, 0] : [34, 197, 94, 26];
+      },
+      getLineColor: (d) => {
+        const type = suppressionResourceType(d);
+        return type.includes('dozer') ? [250, 204, 21, 235] : [34, 197, 94, 120];
+      },
+      getLineWidth: (d) => suppressionResourceType(d).includes('dozer') ? 5 : 2,
       lineWidthUnits: 'pixels',
     });
   }, [mapState.suppressionZones]);
