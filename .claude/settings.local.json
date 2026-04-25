@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"PATH: $PATH\")",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/alexyan51/.nvm/**)",
+      "Read(//Users/alexyan51/**)",
+      "Bash(source ~/.nvm/nvm.sh)",
+      "Bash(nvm ls:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run *)",
+      "Bash(node --check /Users/alexyan51/Pyrotech/backend/orchestration/turnSequencer.js)",
+      "Bash(node --check /Users/alexyan51/Pyrotech/backend/simulation/particleEngine.js)",
+      "Bash(node --check /Users/alexyan51/Pyrotech/backend/simulation/stateManager.js)",
+      "Bash(node --check /Users/alexyan51/Pyrotech/backend/data/overpassFetcher.js)",
+      "Bash(curl -s \"https://nominatim.openstreetmap.org/search?format=json&limit=1&q=Pacific+Palisades+Los+Angeles+CA\" -H \"User-Agent: Ember-WildfireSim/2.0\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('Nominatim OK:', d[0]?.display_name, '| bbox:', d[0]?.boundingbox\\)\")",
+      "Bash(curl -s \"https://api.open-meteo.com/v1/forecast?latitude=34.05&longitude=-118.52&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m&temperature_unit=fahrenheit&wind_speed_unit=mph\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('Weather OK:', JSON.stringify\\(d.current\\)\\)\")",
+      "Bash(curl -s \"https://air-quality-api.open-meteo.com/v1/air-quality?latitude=34.05&longitude=-118.52&current=pm2_5\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('AQ OK:', d.current\\)\")",
+      "Bash(curl -s \"https://archive-api.open-meteo.com/v1/archive?latitude=34.05&longitude=-118.52&start_date=2025-01-07&end_date=2025-01-07&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=UTC\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); const h=d.hourly; console.log\\('Historical weather OK, hour 8:', {temp:h.temperature_2m[8], hum:h.relative_humidity_2m[8], wind:h.wind_speed_10m[8]}\\)\")",
+      "Bash(curl *)",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('TIGERweb tracts OK:', d.features?.length, 'features'\\)\")",
+      "Bash(node *)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+    ]
+  }
+}

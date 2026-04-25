@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Ember Frontend (Next.js)",
+      "runtimeExecutable": "/Users/alexyan51/Pyrotech/.claude/run.sh",
+      "runtimeArgs": ["node", "node_modules/.bin/next", "dev"],
+      "port": 3000,
+      "cwd": "frontend"
+    },
+    {
+      "name": "Ember Backend (Express + WebSocket)",
+      "runtimeExecutable": "/Users/alexyan51/Pyrotech/.claude/run.sh",
+      "runtimeArgs": ["node", "--watch", "index.js"],
+      "port": 4000,
+      "cwd": "backend"
+    }
+  ]
+}

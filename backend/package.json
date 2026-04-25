@@ -1,0 +1,27 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/genai": "^1.48.0",
+    "@turf/turf": "^7.3.5",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.3.2",
+    "ioredis": "^5.10.1",
+    "pdfmake": "^0.3.7",
+    "pg": "^8.20.0",
+    "uuid": "^13.0.0",
+    "ws": "^8.20.0"
+  }
+}
