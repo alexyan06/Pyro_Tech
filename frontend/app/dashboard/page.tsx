@@ -606,18 +606,23 @@ export default function Home() {
             <SimControl label="Playbook" purple onClick={requestPlaybook} />
           </>
         ) : (
-          <Link href="/" style={{
-            fontFamily: 'var(--font-condensed)',
-            fontSize: '0.65rem',
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--text-muted)',
-            textDecoration: 'none',
-            transition: 'color 0.15s',
-          }}>
-            ← Configure New Scenario
-          </Link>
+          <>
+            <Link href="/" style={{
+              fontFamily: 'var(--font-condensed)',
+              fontSize: '0.65rem',
+              fontWeight: 600,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              textDecoration: 'none',
+              transition: 'color 0.15s',
+            }}>
+              ← Configure New Scenario
+            </Link>
+            {playbook && (
+              <SimControl label="View Playbook" purple onClick={() => setShowPlaybook(true)} />
+            )}
+          </>
         )}
       </div>
 

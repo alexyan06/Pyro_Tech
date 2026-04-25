@@ -46,6 +46,7 @@ class StateManager {
       },
       playbook_sections: [],
       tick_summaries: [],
+      agent_transcripts: [],
     };
     this._lastEvolveElapsedHours = 0;
     // Cache for zone buffer polygons (computed once per zone, never change)

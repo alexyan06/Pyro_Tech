@@ -12,7 +12,7 @@ const { StateManager } = require('../simulation/stateManager');
 const { WildfireEngine } = require('../simulation/wildfireEngine');
 const { fetchWeather } = require('../simulation/weatherFetcher');
 const { detectConflicts } = require('./conflictDetector');
-const { generatePlaybook } = require('../playbook/generator');
+const { generatePlaybook, generateExecutiveSummary } = require('../playbook/generator');
 
 const PHYSICS_INTERVAL_MS = 500;  // physics update cadence (real ms)
 const LOGICAL_MINUTES_PER_CYCLE = 30;   // each agent cycle advances sim clock by 30 min
@@ -234,11 +234,18 @@ class TurnSequencer {
     await new Promise(r => setTimeout(r, 600));
     clearInterval(physicsIntervalId);
 
+    const executiveSummary = await generateExecutiveSummary(
+      this.stateManager.state.agent_transcripts,
+      this.stateManager.state.playbook_sections,
+      this.stateManager.state,
+      { durationHours, elapsedHours: this._lastElapsedHours },
+    );
     const playbook = generatePlaybook(
       this.stateManager.state.playbook_sections,
       scenarioInput,
       this.stateManager.state,
       { durationHours, elapsedHours: this._lastElapsedHours },
+      executiveSummary,
     );
     this.sendToClient(ws, {
       type: 'playbook_ready',
@@ -354,6 +361,13 @@ class TurnSequencer {
       this._sendMapEvent(ws, agent.name, enrichedEvent, tick);
       this._sendDerivedMapEvents(ws, agent.name, enrichedEvent, derivedEvents, tick, elapsedHours);
     }
+
+    this.stateManager.state.agent_transcripts.push({
+      cycle: tick,
+      agent: agent.name,
+      text: fullText,
+      elapsed_hours: elapsedHours,
+    });
 
     // Fire-and-forget voice synthesis (non-blocking)
     synthesize(agent.name, fullText).then(audioBuffer => {
