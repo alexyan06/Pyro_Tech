@@ -66,7 +66,7 @@ export interface StateSnapshot {
     sim_time: string;
     elapsed_hours?: number | null;
     fire: {
-      perimeter_geojson: GeoJSON.FeatureCollection | null;
+      perimeter_geojson?: GeoJSON.FeatureCollection | null;
       acres_burned: number;
       spread_rate_acres_hr: number;
     };
@@ -142,6 +142,14 @@ export interface TimeUpdateMessage {
   payload: { sim_time: string; elapsed_hours: number; duration_hours?: number };
 }
 
+export interface PhysicsTickMessage {
+  type: 'physics_tick';
+  payload: {
+    fire?: { agent: AgentName; event: MapEventData; tick: number };
+    time?: { sim_time: string; elapsed_hours: number; duration_hours: number };
+  };
+}
+
 export interface ParticleUpdateMessage {
   type: 'particle_update';
   payload: { particles: [number, number][]; trips?: TripWaypoint[] };
@@ -158,6 +166,7 @@ export type ServerMessage =
   | BranchMapEventMessage
   | BranchCompleteMessage
   | TimeUpdateMessage
+  | PhysicsTickMessage
   | ParticleUpdateMessage
   | { type: 'error'; payload: { message: string } };
 

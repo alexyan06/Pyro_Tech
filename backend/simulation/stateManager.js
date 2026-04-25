@@ -48,6 +48,10 @@ class StateManager {
       tick_summaries: [],
     };
     this._lastEvolveElapsedHours = 0;
+    // Cache for zone buffer polygons (computed once per zone, never change)
+    this._zoneBufferCache = new Map();
+    // Cache for zone bounding boxes ([minLng, minLat, maxLng, maxLat])
+    this._zoneBboxCache = new Map();
   }
 
   _resolveZoneId(identifier) {
@@ -405,22 +409,43 @@ class StateManager {
     // -----------------------------------------------------------------------
     if (firePerim && firePerim.features && firePerim.features.length > 0) {
       const perimFeature = firePerim.features[0];
-      
+      const perimBbox = turf.bbox(perimFeature);
+
       for (const [zoneId, zone] of Object.entries(baseZones)) {
         if (!zone.geometry) continue;
-        
+
+        const current = this.state.evacuation.zones[zoneId];
+        // Terminal state — mandatory can only stay mandatory; no spatial check needed
+        if (current === 'mandatory') continue;
+
+        // Cheap bbox pre-filter: skip zones whose bbox doesn't overlap the fire bbox
+        const zoneBbox = this._zoneBboxCache.get(zoneId);
+        if (zoneBbox) {
+          // [minLng, minLat, maxLng, maxLat]
+          if (perimBbox[0] > zoneBbox[2] || perimBbox[2] < zoneBbox[0] ||
+              perimBbox[1] > zoneBbox[3] || perimBbox[3] < zoneBbox[1]) {
+            // Fire bbox doesn't even reach this zone — skip both turf checks
+            continue;
+          }
+        }
+
         try {
           // Case 1: Fire actually intersects the zone polygon
           const isIntersecting = turf.booleanIntersects(perimFeature, zone.geometry);
-          
-          // Case 2: Fire is very close (within 1km buffer)
-          const zoneBuffer = turf.buffer(zone.geometry, 1, { units: 'kilometers' });
-          const isNear = turf.booleanIntersects(perimFeature, zoneBuffer);
-          
-          const current = this.state.evacuation.zones[zoneId];
-          if (isIntersecting && current !== 'mandatory') {
+
+          if (isIntersecting) {
             this.state.evacuation.zones[zoneId] = 'mandatory';
-          } else if (isNear && (!current || current === 'clear')) {
+            continue;
+          }
+
+          // Case 2: Fire is very close (within 1km buffer) — use cached buffer
+          if (!this._zoneBufferCache.has(zoneId)) {
+            this._zoneBufferCache.set(zoneId, turf.buffer(zone.geometry, 1, { units: 'kilometers' }));
+          }
+          const zoneBuffer = this._zoneBufferCache.get(zoneId);
+          const isNear = turf.booleanIntersects(perimFeature, zoneBuffer);
+
+          if (isNear && (!current || current === 'clear')) {
             this.state.evacuation.zones[zoneId] = 'warning';
           }
         } catch (err) {
@@ -595,6 +620,7 @@ class StateManager {
     // 3. Infrastructure — spatial degradation
     // -----------------------------------------------------------------------
     const infra = this.state.baseData?.infrastructure || {};
+    const perimFeatureForInfra = firePerim?.features?.[0];
     for (const [id, facility] of Object.entries(infra)) {
       if (!this.state.infrastructure.facilities[id]) {
         this.state.infrastructure.facilities[id] = {
@@ -602,18 +628,21 @@ class StateManager {
           status: 'operational',
         };
       }
-      
+
+      // Skip spatial check for facilities already offline — offline is terminal
+      if (this.state.infrastructure.facilities[id].status === 'offline') continue;
+
       // Spatial check for infrastructure damage
-      if (firePerim && firePerim.features?.[0] && facility.geometry) {
+      if (perimFeatureForInfra && facility.geometry) {
         try {
-          if (turf.booleanIntersects(firePerim.features[0], facility.geometry)) {
+          if (turf.booleanIntersects(perimFeatureForInfra, facility.geometry)) {
             this.state.infrastructure.facilities[id].status = 'offline';
           }
         } catch (_) {}
-      } else if (firePerim && firePerim.features?.[0] && facility.location) {
+      } else if (perimFeatureForInfra && facility.location) {
         try {
           const point = turf.point([facility.location.lng, facility.location.lat]);
-          if (turf.booleanPointInPolygon(point, firePerim.features[0])) {
+          if (turf.booleanPointInPolygon(point, perimFeatureForInfra)) {
             this.state.infrastructure.facilities[id].status = 'offline';
           }
         } catch (_) {}
@@ -725,6 +754,18 @@ class StateManager {
       }
     });
 
+    // Pre-compute per-zone bounding boxes for fast bbox overlap checks in evolve()
+    this._zoneBboxCache = new Map();
+    this._zoneBufferCache = new Map();
+    for (const [zoneId, zone] of Object.entries(data.zones || {})) {
+      if (zone.geometry?.type === 'Polygon') {
+        try {
+          const bb = turf.bbox(zone.geometry);
+          this._zoneBboxCache.set(zoneId, bb);
+        } catch (_) {}
+      }
+    }
+
     const zoneCount = Object.keys(data.zones || {}).length;
     const shelterCount = Object.keys(data.shelters || {}).length;
     const routeCount = Object.keys(data.routes || {}).length;
@@ -834,6 +875,13 @@ class StateManager {
     }
 
     return events;
+  }
+
+  // Lightweight snapshot for live streaming — omits perimeter_geojson (already sent via physics_tick)
+  getMetricsSnapshot(tick, simTime, elapsedHours = null) {
+    const snap = this.getSnapshot(tick, simTime, elapsedHours);
+    delete snap.fire.perimeter_geojson;
+    return snap;
   }
 
   getSnapshot(tick, simTime, elapsedHours = null) {

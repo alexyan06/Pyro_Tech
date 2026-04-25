@@ -542,9 +542,9 @@ export default function MapView({ mapState, center }: MapViewProps) {
   // ── Evacuation routes ───────────────────────────────────────────────────────
   const routeLayer = useMemo(
     () => Object.keys(mapState.routeFeatures).length > 0
-      ? createRouteLayer(mapState.routeFeatures, mapState.closedRoutes, mapState.routeCongestion, mapState.trafficJams)
+      ? createRouteLayer(mapState.routeFeatures, mapState.closedRoutes, mapState.routeCongestion, mapState.trafficJams, mapState.routeCongestionVersion, mapState.trafficJamsVersion)
       : null,
-    [mapState.routeFeatures, mapState.closedRoutes, mapState.routeCongestion, mapState.trafficJams],
+    [mapState.routeFeatures, mapState.closedRoutes, mapState.routeCongestion, mapState.trafficJams, mapState.routeCongestionVersion, mapState.trafficJamsVersion],
   );
 
   const populationPointLayer = useMemo(
