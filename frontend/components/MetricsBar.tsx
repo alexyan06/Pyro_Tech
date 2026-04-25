@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { StateSnapshot } from '@/lib/types';
 
 interface MetricsBarProps {
@@ -8,14 +9,64 @@ interface MetricsBarProps {
   simTimeString?: string;
 }
 
+const TOOLTIP_MARGIN = 8; // px from viewport edges
+
+function Tooltip({ text, anchorLeft, anchorTop }: { text: string; anchorLeft: number; anchorTop: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [left, setLeft] = useState(anchorLeft);
+
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const { width } = ref.current.getBoundingClientRect();
+    const centered = anchorLeft - width / 2;
+    const clamped  = Math.min(
+      Math.max(centered, TOOLTIP_MARGIN),
+      window.innerWidth - width - TOOLTIP_MARGIN,
+    );
+    setLeft(clamped);
+  }, [anchorLeft]);
+
+  return (
+    <div ref={ref} style={{
+      position: 'fixed',
+      top: anchorTop,
+      left,
+      background: 'var(--panel-bg)',
+      border: '1px solid var(--border-bright)',
+      borderRadius: '3px',
+      padding: '5px 9px',
+      fontSize: '0.72rem',
+      lineHeight: 1.4,
+      color: 'var(--text-primary)',
+      whiteSpace: 'nowrap',
+      pointerEvents: 'none',
+      zIndex: 9999,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+    }}>
+      {text}
+    </div>
+  );
+}
+
 interface MetricItemProps {
   label: string;
   value: string | number;
   color: string;
   primary?: boolean;
+  tooltip?: string;
 }
 
-function MetricItem({ label, value, color, primary }: MetricItemProps) {
+function MetricItem({ label, value, color, primary, tooltip }: MetricItemProps) {
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const [tipPos, setTipPos] = useState<{ top: number; left: number } | null>(null);
+
+  const enter = useCallback(() => {
+    if (!labelRef.current) return;
+    const r = labelRef.current.getBoundingClientRect();
+    setTipPos({ top: r.bottom + 6, left: r.left + r.width / 2 });
+  }, []);
+  const leave = useCallback(() => setTipPos(null), []);
+
   return (
     <div style={{
       display: 'flex',
@@ -37,16 +88,28 @@ function MetricItem({ label, value, color, primary }: MetricItemProps) {
       }}>
         {value}
       </span>
-      <span style={{
-        fontFamily: 'var(--font-condensed)',
-        fontSize: '0.64rem',
-        letterSpacing: '0.12em',
-        textTransform: 'uppercase' as const,
-        color: 'var(--text-secondary)',
-        whiteSpace: 'nowrap' as const,
-      }}>
+      <span
+        ref={labelRef}
+        onMouseEnter={enter}
+        onMouseLeave={leave}
+        style={{
+          fontFamily: 'var(--font-condensed)',
+          fontSize: '0.64rem',
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase' as const,
+          color: 'var(--text-secondary)',
+          whiteSpace: 'nowrap' as const,
+          cursor: tooltip ? 'default' : undefined,
+          borderBottom: tooltip ? '1px dotted var(--border-bright)' : undefined,
+        }}
+      >
         {label}
       </span>
+
+      {tipPos && tooltip && createPortal(
+        <Tooltip text={tooltip} anchorLeft={tipPos.left} anchorTop={tipPos.top} />,
+        document.body,
+      )}
     </div>
   );
 }
@@ -112,19 +175,19 @@ export default function MetricsBar({ snapshot, simTimeString }: MetricsBarProps)
     return (
       <div style={baseStyle}>
         <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-          <MetricItem label="Acres Burned"  value="—" color="var(--accent-red)"    primary />
+          <MetricItem label="Acres Burned"  value="—" color="var(--accent-red)"    primary tooltip="Total land area consumed by the active fire perimeter" />
           <Divider />
-          <MetricItem label="Evacuees"      value="—" color="var(--accent-blue)"   />
+          <MetricItem label="Evacuees"      value="—" color="var(--accent-blue)"   tooltip="People ordered to evacuate across all active zones" />
           <Divider />
-          <MetricItem label="Shelter"       value="—" color="var(--accent-green)"  />
+          <MetricItem label="Shelter"       value="—" color="var(--accent-green)"  tooltip="Percentage of total shelter capacity currently occupied" />
           <Divider />
-          <MetricItem label="Routes Closed" value="—" color="var(--accent-orange)" />
+          <MetricItem label="Routes Closed" value="—" color="var(--accent-orange)" tooltip="Evacuation routes closed due to fire, damage, or hazard" />
           <Divider />
-          <MetricItem label="Offline"       value="—" color="var(--accent-yellow)" />
+          <MetricItem label="Offline"       value="—" color="var(--accent-yellow)" tooltip="Infrastructure facilities offline (power, water, hospitals)" />
           <Divider />
-          <MetricItem label="Pop. at Risk"  value="—" color="var(--accent-purple)" />
+          <MetricItem label="Pop. at Risk"  value="—" color="var(--accent-purple)" tooltip="Residents inside zones under any active evacuation status" />
           <Divider />
-          <MetricItem label="Congested"     value="—" color="var(--accent-orange)" />
+          <MetricItem label="Congested"     value="—" color="var(--accent-orange)" tooltip="Routes still open but experiencing heavy evacuation traffic" />
         </div>
         <span style={{
           fontFamily: 'var(--font-condensed)',
@@ -154,19 +217,19 @@ export default function MetricsBar({ snapshot, simTimeString }: MetricsBarProps)
   return (
     <div style={baseStyle}>
       <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-        <MetricItem label="Acres Burned"  value={animatedAcres.toLocaleString()}                            color="var(--accent-red)"    primary />
+        <MetricItem label="Acres Burned"  value={animatedAcres.toLocaleString()}                             color="var(--accent-red)"    primary tooltip="Total land area consumed by the active fire perimeter" />
         <Divider />
-        <MetricItem label="Evacuees"      value={evacuation.total_evacuees.toLocaleString()}                color="var(--accent-blue)"   />
+        <MetricItem label="Evacuees"      value={evacuation.total_evacuees.toLocaleString()}                 color="var(--accent-blue)"   tooltip="People ordered to evacuate across all active zones" />
         <Divider />
-        <MetricItem label="Shelter"       value={shelterPct}                                                color="var(--accent-green)"  />
+        <MetricItem label="Shelter"       value={shelterPct}                                                 color="var(--accent-green)"  tooltip="Percentage of total shelter capacity currently occupied" />
         <Divider />
-        <MetricItem label="Routes Closed" value={evacuation.routes_closed}                                  color="var(--accent-orange)" />
+        <MetricItem label="Routes Closed" value={evacuation.routes_closed}                                   color="var(--accent-orange)" tooltip="Evacuation routes closed due to fire, damage, or hazard" />
         <Divider />
-        <MetricItem label="Offline"       value={infrastructure.facilities_offline}                         color="var(--accent-yellow)" />
+        <MetricItem label="Offline"       value={infrastructure.facilities_offline}                          color="var(--accent-yellow)" tooltip="Infrastructure facilities offline (power, water, hospitals)" />
         <Divider />
-        <MetricItem label="Pop. at Risk"  value={evacuation.total_population_at_risk?.toLocaleString() ?? 0} color="var(--accent-purple)" />
+        <MetricItem label="Pop. at Risk"  value={evacuation.total_population_at_risk?.toLocaleString() ?? 0} color="var(--accent-purple)" tooltip="Residents inside zones under any active evacuation status" />
         <Divider />
-        <MetricItem label="Congested"     value={evacuation.congested_routes ?? 0}                          color="var(--accent-orange)" />
+        <MetricItem label="Congested"     value={evacuation.congested_routes ?? 0}                           color="var(--accent-orange)" tooltip="Routes still open but experiencing heavy evacuation traffic" />
       </div>
 
       <div style={{
