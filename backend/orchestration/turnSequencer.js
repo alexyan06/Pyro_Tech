@@ -14,11 +14,11 @@ const { fetchWeather } = require('../simulation/weatherFetcher');
 const { detectConflicts } = require('./conflictDetector');
 const { generatePlaybook } = require('../playbook/generator');
 
-const PHYSICS_INTERVAL_MS       = 500;  // physics update cadence (real ms)
+const PHYSICS_INTERVAL_MS = 500;  // physics update cadence (real ms)
 const LOGICAL_MINUTES_PER_CYCLE = 30;   // each agent cycle advances sim clock by 30 min
-const DEMO_AGENT_CYCLE_MS       = 30_000; // smooth visual time between agent turns
-const DEFAULT_DURATION_HOURS    = 6;
-const MAX_TICKS                 = 6;    // kept for branch simulation compatibility
+const DEMO_AGENT_CYCLE_MS = 30_000; // smooth visual time between agent turns
+const DEFAULT_DURATION_HOURS = 6;
+const MAX_TICKS = 6;    // kept for branch simulation compatibility
 
 function normalizeDurationHours(value) {
   if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_DURATION_HOURS;
@@ -44,7 +44,7 @@ class TurnSequencer {
       new ResourceAgent(),
       new SynthesisAgent(),
     ];
-    
+
     this.stateManager = new StateManager();
     this.paused = false;
     this.stopped = false;
@@ -88,15 +88,15 @@ class TurnSequencer {
     }
     const weather = await fetchWeather(weatherLat, weatherLng);
     if (scenarioInput.metrics) {
-      if (scenarioInput.metrics.wind     != null) weather.windSpeed   = scenarioInput.metrics.wind;
+      if (scenarioInput.metrics.wind != null) weather.windSpeed = scenarioInput.metrics.wind;
       if (scenarioInput.metrics.windDirection != null) weather.windDirection = scenarioInput.metrics.windDirection;
-      if (scenarioInput.metrics.temp     != null) weather.temperature = scenarioInput.metrics.temp;
-      if (scenarioInput.metrics.humidity != null) weather.humidity    = scenarioInput.metrics.humidity;
+      if (scenarioInput.metrics.temp != null) weather.temperature = scenarioInput.metrics.temp;
+      if (scenarioInput.metrics.humidity != null) weather.humidity = scenarioInput.metrics.humidity;
     }
     console.log('[Sequencer] Weather:', weather);
 
     const windBearing = weather.windDirection || 45;
-    const windSpeed   = weather.windSpeed     || 40;
+    const windSpeed = weather.windSpeed || 40;
     const engine = new WildfireEngine(
       [scenarioInput.fireOrigin.lng, scenarioInput.fireOrigin.lat],
       windBearing,
@@ -123,7 +123,7 @@ class TurnSequencer {
 
       const elapsedSimHours = this._currentPhysicsElapsedHours(durationHours);
       this._lastElapsedHours = elapsedSimHours;
-      const simTime    = new Date(simStartSim.getTime() + elapsedSimHours * 3_600_000);
+      const simTime = new Date(simStartSim.getTime() + elapsedSimHours * 3_600_000);
       const simTimeStr = simTime.toISOString();
 
       // Fire perimeter (grows continuously)
@@ -177,9 +177,9 @@ class TurnSequencer {
         };
         particleEngine.syncFlows(
           this.stateManager.state.evacuation.flows,
-          baseData.zones    || {},
+          baseData.zones || {},
           baseData.shelters || {},
-          baseData.routes   || {},
+          baseData.routes || {},
           fireState,
         );
         const trips = particleEngine.getTrips();
@@ -246,11 +246,11 @@ class TurnSequencer {
   }
 
   async _runAgentCycle(scenarioInput, agentRun, simTimeStr, elapsedHours, weather, ws) {
-    const disasterAgent       = this.agents.find(a => a.name === 'disaster');
-    const evacuationAgent     = this.agents.find(a => a.name === 'evacuation');
-    const congestionAgent     = this.agents.find(a => a.name === 'traffic');
-    const resourceAgent       = this.agents.find(a => a.name === 'resource');
-    const synthesisAgent      = this.agents.find(a => a.name === 'synthesis');
+    const disasterAgent = this.agents.find(a => a.name === 'disaster');
+    const evacuationAgent = this.agents.find(a => a.name === 'evacuation');
+    const congestionAgent = this.agents.find(a => a.name === 'traffic');
+    const resourceAgent = this.agents.find(a => a.name === 'resource');
+    const synthesisAgent = this.agents.find(a => a.name === 'synthesis');
 
     const disasterOut = await this._runAgent(
       disasterAgent,
@@ -337,7 +337,7 @@ class TurnSequencer {
           payload: { agent: agent.name, audio_base64: audioBuffer.toString('base64'), tick },
         });
       }
-    }).catch(() => {}); // voice is optional, swallow errors
+    }).catch(() => { }); // voice is optional, swallow errors
 
     return { agent: agent.name, text: fullText, mapEvents };
   }
@@ -800,9 +800,9 @@ class TurnSequencer {
     });
   }
 
-  pause()  { this.paused  = true; }
-  resume() { this.paused  = false; }
-  stop()   { this.stopped = true; }
+  pause() { this.paused = true; }
+  resume() { this.paused = false; }
+  stop() { this.stopped = true; }
 
   /**
    * Run a "what-if" branch simulation.
@@ -827,9 +827,9 @@ class TurnSequencer {
       const weather = { temperature: 75, humidity: 8, windSpeed: 70, windDirection: 45, windGusts: 95 };
 
       // Expanded weather parser
-      const dirMap = { 
+      const dirMap = {
         N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5, SE: 135, SSE: 157.5,
-        S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5 
+        S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5
       };
       for (const [dir, deg] of Object.entries(dirMap)) {
         if (new RegExp(`\\b${dir}\\b|${dir.toLowerCase()}`, 'i').test(scenarioModifier)) {
@@ -872,7 +872,7 @@ class TurnSequencer {
 
       for (let i = 1; i <= BRANCH_HOURS; i++) {
         const elapsedHours = startElapsed + i;
-        
+
         // Generate branch fire perimeter
         const branchPerimeter = branchEngine.generatePerimeter(i);
         branchState.applyEvent({ type: 'update_fire_perimeter', geojson: branchPerimeter });
