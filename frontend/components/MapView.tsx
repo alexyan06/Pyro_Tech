@@ -21,6 +21,7 @@ import WindCanvas from './WindCanvas';
 interface MapViewProps {
   mapState: MapState;
   center?: { lat: number; lng: number };
+  isReplaying?: boolean;
 }
 
 interface ZoneFeature {
@@ -221,11 +222,13 @@ const MapOverlay = memo(function MapOverlay({
   staticLayers,
   viewState,
   firePerimeter,
+  isReplaying,
 }: {
   mapState: MapState,
   staticLayers: Layer[],
   viewState: Record<string, unknown>,
   firePerimeter: GeoJSON.FeatureCollection | null,
+  isReplaying?: boolean,
 }) {
   const [animTime, setAnimTime] = useState(0);
   const [wallClockMs, setWallClockMs] = useState(0);
@@ -245,12 +248,14 @@ const MapOverlay = memo(function MapOverlay({
   const hasAnimated = hasFirePerimeter || (mapState.resourceDispatches?.length ?? 0) > 0 || mapState.tripWaypoints.length > 0 || mapState.recentActions.length > 0;
 
 
-  // When a new perimeter arrives, save the current lerped position as start point
+  // When a new perimeter arrives, save the current lerped position as start point.
+  // During replay, snap immediately (prevPerim = target) to avoid spike artifacts
+  // from lerping a large live perimeter backward to a small historical one.
   useEffect(() => {
-    prevPerimRef.current = lerpedPerimRef.current ?? firePerimeter;
+    prevPerimRef.current = isReplaying ? firePerimeter : (lerpedPerimRef.current ?? firePerimeter);
     nextPerimRef.current = firePerimeter;
     perimUpdateTimeRef.current = Date.now();
-  }, [firePerimeter]);
+  }, [firePerimeter, isReplaying]);
 
   useEffect(() => {
     if (!hasAnimated) {
@@ -521,7 +526,7 @@ const MapOverlay = memo(function MapOverlay({
   );
 });
 
-export default function MapView({ mapState, center }: MapViewProps) {
+export default function MapView({ mapState, center, isReplaying }: MapViewProps) {
   const [viewState, setViewState] = useState({
     longitude: center?.lng ?? LA_CENTER[0],
     latitude: center?.lat ?? LA_CENTER[1],
@@ -721,6 +726,7 @@ export default function MapView({ mapState, center }: MapViewProps) {
         staticLayers={staticLayers}
         viewState={viewState}
         firePerimeter={mapState.firePerimeter}
+        isReplaying={isReplaying}
       />
 
       <MapLegend />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MapView from '@/components/MapView';
@@ -11,7 +11,7 @@ import ReplayScrubber from '@/components/ReplayScrubber';
 import BranchPanel from '@/components/BranchPanel';
 import { MapNotifications, type MapNotification } from '@/components/MapNotifications';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useMapState } from '@/hooks/useMapState';
+import { useMapState, type SuppressionZone } from '@/hooks/useMapState';
 import { useAgentAudio } from '@/hooks/useAgentAudio';
 import { useReplay } from '@/hooks/useReplay';
 import { dispatchMapEvent } from '@/lib/mapEvents';
@@ -325,6 +325,55 @@ export default function Home() {
   const { isReplaying, replayTick, replaySnapshot, setReplayTick, exitReplay, minTick, maxTick } =
     useReplay(snapshots);
 
+  // When replaying, overlay snapshot data onto live mapState so the map rewinds correctly.
+  // Live state keeps updating in the background; when replay exits, live state is already current.
+  const displayMapState = useMemo(() => {
+    if (!isReplaying || !replaySnapshot) return mapState;
+    const snap = replaySnapshot.payload;
+
+    const suppressionZones: Record<string, SuppressionZone> = {};
+    for (const z of snap.fire.suppression_zones ?? []) {
+      const id = `${z.type}-${z.center[0].toFixed(5)}-${z.center[1].toFixed(5)}`;
+      suppressionZones[id] = {
+        id,
+        geojson: z.geojson,
+        effectiveness: z.factor,
+        resource_type: z.type,
+      };
+    }
+
+    return {
+      ...mapState,
+      // Already-working overrides
+      firePerimeter: snap.fire.perimeter_geojson,
+      zones: snap.evacuation.zones,
+      shelters: snap.resources.shelters,
+      threatZones: {},
+      tripWaypoints: [],
+      particles: [],
+      recentActions: [],
+      resourceDispatches: [],
+      // New overrides
+      suppressionZones,
+      closedRoutes: new Set<string>(snap.evacuation.closed_routes ?? []),
+      routeCongestion: Object.fromEntries(
+        (snap.evacuation.route_congestion ?? []).map(r => [
+          r.route_id,
+          { status: r.status, load_pct: r.load_pct, reason: r.reason, capacity_multiplier: r.capacity_multiplier },
+        ])
+      ),
+      trafficJams: Object.fromEntries(
+        (snap.evacuation.traffic_jams ?? []).map(j => [j.route_id, j.severity])
+      ),
+      infrastructure: snap.infrastructure.facilities ?? {},
+      resources: (snap.resources.deployments ?? []).map(d => ({
+        type: d.type,
+        location: d.location,
+        count: d.count,
+      })),
+    };
+  }, [isReplaying, replaySnapshot, mapState]);
+
   useEffect(() => {
     connect();
   }, [connect]);
@@ -538,8 +587,9 @@ export default function Home() {
         {/* Map */}
         <div className="relative" style={{ width: `${mapWidth}%` }}>
           <MapView
-            mapState={mapState}
+            mapState={displayMapState}
             center={storedScenario ? { lat: storedScenario.centerLat, lng: storedScenario.centerLng } : undefined}
+            isReplaying={isReplaying}
           />
           <MapNotifications notifications={notifications} />
           {isRunning && (

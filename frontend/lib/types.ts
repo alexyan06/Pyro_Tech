@@ -69,6 +69,14 @@ export interface StateSnapshot {
       perimeter_geojson: GeoJSON.FeatureCollection | null;
       acres_burned: number;
       spread_rate_acres_hr: number;
+      suppression_zones?: Array<{
+        geojson: GeoJSON.Feature | GeoJSON.FeatureCollection | GeoJSON.Polygon | GeoJSON.MultiPolygon;
+        factor: number;
+        type: string;
+        center: [number, number];
+        radius_km: number;
+        count: number;
+      }>;
     };
     evacuation: {
       zones: Record<string, ZoneStatus>;
@@ -80,16 +88,27 @@ export interface StateSnapshot {
       routes_closed: number;
       total_population_at_risk?: number;
       congested_routes?: number;
+      closed_routes?: string[];
+      route_congestion?: Array<{
+        route_id: string;
+        status: 'open' | 'congested' | 'closed';
+        load_pct: number;
+        reason?: string;
+        capacity_multiplier?: number;
+      }>;
+      traffic_jams?: Array<{ route_id: string; severity: 'extreme' | 'high' | 'moderate' }>;
     };
     resources: {
       engines_deployed: number;
       crews_deployed: number;
       air_tankers_active: number;
       shelters: Record<string, ShelterState>;
+      deployments?: Array<{ type: string; location: [number, number]; count: number }>;
     };
     infrastructure: {
       facilities_offline: number;
       power_shutoff_areas: number;
+      facilities?: Record<string, { name: string; status: string }>;
     };
   };
 }
