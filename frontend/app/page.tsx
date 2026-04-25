@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import LoadingScreen from '@/components/LoadingScreen';
 
 const API_BASE = process.env.NEXT_PUBLIC_WS_URL?.replace(/^ws/, 'http') ?? 'http://localhost:4000';
 
@@ -18,6 +19,29 @@ const PRESETS = [
     durationHours: '6',
   },
 ] as const;
+
+const EMBERS = [
+  { left: 12, delay: 0.0, duration: 3.8, size: 5, drift: -22, color: '#f97316' },
+  { left: 27, delay: 0.6, duration: 4.5, size: 4, drift:  18, color: '#ef4444' },
+  { left: 41, delay: 1.1, duration: 3.2, size: 6, drift: -35, color: '#fb923c' },
+  { left: 55, delay: 0.3, duration: 5.0, size: 3, drift:  28, color: '#fbbf24' },
+  { left: 68, delay: 1.7, duration: 3.6, size: 5, drift: -14, color: '#f97316' },
+  { left: 80, delay: 0.9, duration: 4.2, size: 4, drift:  38, color: '#ef4444' },
+  { left: 19, delay: 2.1, duration: 3.9, size: 3, drift:  20, color: '#fb923c' },
+  { left: 35, delay: 1.4, duration: 4.8, size: 6, drift: -28, color: '#fbbf24' },
+  { left: 49, delay: 0.2, duration: 3.5, size: 4, drift:  16, color: '#f97316' },
+  { left: 63, delay: 2.5, duration: 4.1, size: 5, drift: -40, color: '#ef4444' },
+  { left: 75, delay: 0.7, duration: 3.3, size: 3, drift:  30, color: '#fb923c' },
+  { left:  8, delay: 1.9, duration: 5.2, size: 4, drift: -18, color: '#fbbf24' },
+  { left: 22, delay: 3.0, duration: 3.7, size: 6, drift:  24, color: '#f97316' },
+  { left: 46, delay: 2.3, duration: 4.4, size: 3, drift: -32, color: '#ef4444' },
+  { left: 58, delay: 0.5, duration: 3.1, size: 5, drift:  12, color: '#fb923c' },
+  { left: 71, delay: 1.6, duration: 4.7, size: 4, drift: -26, color: '#fbbf24' },
+  { left: 87, delay: 2.8, duration: 3.4, size: 3, drift:  36, color: '#f97316' },
+  { left: 32, delay: 0.4, duration: 4.0, size: 5, drift: -10, color: '#ef4444' },
+  { left: 90, delay: 1.2, duration: 5.5, size: 4, drift:  22, color: '#fb923c' },
+  { left:  4, delay: 3.3, duration: 3.6, size: 6, drift: -38, color: '#fbbf24' },
+];
 
 const SYSTEMS = [
   { label: 'Fire Behavior Analysis',    color: '#e05555' },
@@ -117,6 +141,7 @@ export default function SetupPage() {
         .catch(() => null);
 
       sessionStorage.setItem('pyrotech_scenario', JSON.stringify(data));
+      sessionStorage.setItem('pyrotech_sim_loading', '1');
       router.push('/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -127,7 +152,38 @@ export default function SetupPage() {
 
   return (
     <div className="sp-root">
+      <LoadingScreen visible={loading} />
       <div className="sp-scan" aria-hidden="true" />
+      {/* Fire glow at bottom */}
+      <div aria-hidden="true" style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '200px',
+        background: 'radial-gradient(ellipse 80% 100% at 50% 100%, oklch(40% 0.2 30 / 0.25) 0%, transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+      {/* Ember particles */}
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        {EMBERS.map((e, i) => (
+          <span
+            key={i}
+            style={{
+              position: 'absolute',
+              bottom: '-10px',
+              left: `${e.left}%`,
+              width: `${e.size}px`,
+              height: `${e.size}px`,
+              borderRadius: '50%',
+              background: e.color,
+              boxShadow: `0 0 ${e.size * 2}px ${e.color}`,
+              animation: `ember-rise ${e.duration}s ease-in ${e.delay}s infinite`,
+              ['--drift' as string]: `${e.drift}px`,
+            }}
+          />
+        ))}
+      </div>
       <div className="sp-particles" aria-hidden="true">
         {Array.from({ length: 16 }).map((_, i) => (
           <div key={i} className="sp-particle" style={{ '--i': i } as React.CSSProperties} />

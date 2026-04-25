@@ -10,6 +10,7 @@ import PlaybookViewer from '@/components/PlaybookViewer';
 import ReplayScrubber from '@/components/ReplayScrubber';
 import BranchPanel from '@/components/BranchPanel';
 import { MapNotifications, type MapNotification } from '@/components/MapNotifications';
+import LoadingScreen from '@/components/LoadingScreen';
 import { useSimulation } from '@/hooks/useSimulation';
 import { useMapState } from '@/hooks/useMapState';
 import { useAgentAudio } from '@/hooks/useAgentAudio';
@@ -101,6 +102,9 @@ export default function Home() {
   const [storedScenario, setStoredScenario] = useState<StoredScenario | null>(null);
   const [notifications, setNotifications] = useState<MapNotification[]>([]);
   const [mapWidth, setMapWidth] = useState(60);
+  const [simLoading, setSimLoading] = useState(() =>
+    typeof window !== 'undefined' && sessionStorage.getItem('pyrotech_sim_loading') === '1'
+  );
   const isDraggingRef = useRef(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
 
@@ -283,7 +287,7 @@ export default function Home() {
 
   const handleStateSnapshot = useCallback(
     () => {
-      // Trip waypoints are driven by particle_update (every 2s), not state_snapshot.
+      setSimLoading(false);
     },
     [],
   );
@@ -377,6 +381,7 @@ export default function Home() {
 
   // On mount: load scenario from sessionStorage, redirect to setup if missing
   useEffect(() => {
+    sessionStorage.removeItem('pyrotech_sim_loading');
     try {
       const raw = sessionStorage.getItem('pyrotech_scenario');
       if (!raw) {
@@ -419,14 +424,17 @@ export default function Home() {
 
     reset();
     startSimulation(payload);
-    
+    const t = setTimeout(() => setSimLoading(true), 0);
+
     // Seed base data for this specific scenario
     const bust = `${storedScenario.city}-${Date.now()}`;
     seedBaseData(bust);
+    return () => clearTimeout(t);
   }, [isConnected, storedScenario, reset, startSimulation, seedBaseData]);
 
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--background)' }}>
+      <LoadingScreen visible={simLoading} />
       {/* Header */}
       <div
         className="flex items-center justify-between px-4"

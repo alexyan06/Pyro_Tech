@@ -204,7 +204,7 @@ export default function MetricsBar({ snapshot }: MetricsBarProps) {
     );
   }
 
-  const { fire, evacuation, resources, infrastructure } = snapshot;
+  const { evacuation, resources, infrastructure } = snapshot;
 
   const shelterEntries = Object.values(resources.shelters);
   const totalOccupancy = shelterEntries.reduce((sum, s) => sum + s.occupancy, 0);
