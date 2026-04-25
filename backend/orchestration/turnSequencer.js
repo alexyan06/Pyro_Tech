@@ -86,14 +86,40 @@ class TurnSequencer {
       weatherLat = (south + north) / 2;
       weatherLng = (west + east) / 2;
     }
-    const weather = await fetchWeather(weatherLat, weatherLng);
-    if (scenarioInput.metrics) {
-      if (scenarioInput.metrics.wind != null) weather.windSpeed = scenarioInput.metrics.wind;
-      if (scenarioInput.metrics.windDirection != null) weather.windDirection = scenarioInput.metrics.windDirection;
-      if (scenarioInput.metrics.temp != null) weather.temperature = scenarioInput.metrics.temp;
-      if (scenarioInput.metrics.humidity != null) weather.humidity = scenarioInput.metrics.humidity;
-    }
-    console.log('[Sequencer] Weather:', weather);
+
+    // Apply any user-supplied metric overrides
+    const metricsOverrides = scenarioInput.metrics || {};
+
+    // Start physics immediately with defaults; real weather updates the engine when it arrives.
+    let weather = {
+      windSpeed:    metricsOverrides.wind        ?? 35,
+      windDirection: metricsOverrides.windDirection ?? 45,
+      temperature:  metricsOverrides.temp        ?? 75,
+      humidity:     metricsOverrides.humidity    ?? 30,
+      windGusts:    40,
+      pm25:         15,
+    };
+
+    // Kick off the weather fetch in the background — engine will be reseeded once it lands.
+    fetchWeather(weatherLat, weatherLng).then(realWeather => {
+      if (this.stopped) return;
+      if (metricsOverrides.wind         != null) realWeather.windSpeed     = metricsOverrides.wind;
+      if (metricsOverrides.windDirection != null) realWeather.windDirection = metricsOverrides.windDirection;
+      if (metricsOverrides.temp         != null) realWeather.temperature   = metricsOverrides.temp;
+      if (metricsOverrides.humidity     != null) realWeather.humidity      = metricsOverrides.humidity;
+      weather = realWeather;
+      // Reseed engine with real weather values so physics reflects actual conditions
+      engine.windBearing = realWeather.windDirection || 45;
+      engine.windSpeed   = realWeather.windSpeed     || 40;
+      engine.humidity    = realWeather.humidity      ?? 30;
+      engine.temperature = realWeather.temperature   ?? 75;
+      engine.pm25        = realWeather.pm25          ?? 15;
+      console.log('[Sequencer] Weather resolved (background):', realWeather);
+    }).catch(err => {
+      console.warn('[Sequencer] Weather fetch failed, using defaults:', err.message);
+    });
+
+    console.log('[Sequencer] Starting physics with default weather; real weather fetching in background...');
 
     const windBearing = weather.windDirection || 45;
     const windSpeed = weather.windSpeed || 40;
