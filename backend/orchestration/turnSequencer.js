@@ -635,7 +635,7 @@ class TurnSequencer {
     const usedZones = new Set(existingFlows.map(f => f.from_zone));
 
     const statusRank = { mandatory: 0, warning: 1, voluntary: 2, clear: 3 };
-    const dynamicStatus = s.evacuation.zones || {};
+    const dynamicStatus = { ...(s.evacuation.derivedZones || {}), ...(s.evacuation.zones || {}) };
 
     // Rank zones by (dynamic evacuation severity, then proximity to fire).
     const rankedZones = zoneIds

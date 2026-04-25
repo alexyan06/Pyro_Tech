@@ -16,7 +16,8 @@ class StateManager {
         suppression_zones: [], // List of { geojson: Polygon, factor: 0.1-0.9 }
       },
       evacuation: {
-        zones: {},
+        zones: {},        // explicit agent-driven zone statuses only (broadcast to frontend)
+        derivedZones: {}, // auto-escalated by evolve() — internal use only, never snapshotted
         total_evacuees: 0,
         ordered_to_evacuate: 0,
         departed_evacuees: 0,
@@ -415,7 +416,8 @@ class StateManager {
       for (const [zoneId, zone] of Object.entries(baseZones)) {
         if (!zone.geometry) continue;
 
-        const current = this.state.evacuation.zones[zoneId];
+        // Union of explicit + derived for terminal-state check
+        const current = this.state.evacuation.zones[zoneId] ?? this.state.evacuation.derivedZones[zoneId];
         // Terminal state — mandatory can only stay mandatory; no spatial check needed
         if (current === 'mandatory') continue;
 
@@ -435,7 +437,7 @@ class StateManager {
           const isIntersecting = turf.booleanIntersects(perimFeature, zone.geometry);
 
           if (isIntersecting) {
-            this.state.evacuation.zones[zoneId] = 'mandatory';
+            this.state.evacuation.derivedZones[zoneId] = 'mandatory';
             continue;
           }
 
@@ -447,7 +449,7 @@ class StateManager {
           const isNear = turf.booleanIntersects(perimFeature, zoneBuffer);
 
           if (isNear && (!current || current === 'clear')) {
-            this.state.evacuation.zones[zoneId] = 'warning';
+            this.state.evacuation.derivedZones[zoneId] = 'warning';
           }
         } catch (err) {
           // Fallback logic handled below if turf fails or data missing
@@ -464,11 +466,11 @@ class StateManager {
           const zLat = zone.centroid_lat;
           if (zLng == null || zLat == null) continue;
           const dist = Math.sqrt(Math.pow(zLng - ignLng, 2) + Math.pow(zLat - ignLat, 2));
-          const current = this.state.evacuation.zones[zoneId];
+          const current = this.state.evacuation.zones[zoneId] ?? this.state.evacuation.derivedZones[zoneId];
           if (dist <= fireRadiusDeg && current !== 'mandatory') {
-            this.state.evacuation.zones[zoneId] = 'mandatory';
+            this.state.evacuation.derivedZones[zoneId] = 'mandatory';
           } else if (dist <= fireRadiusDeg * 2.5 && (!current || current === 'clear')) {
-            this.state.evacuation.zones[zoneId] = 'warning';
+            this.state.evacuation.derivedZones[zoneId] = 'warning';
           }
         }
       }
@@ -479,7 +481,8 @@ class StateManager {
     // -----------------------------------------------------------------------
     const complianceRate = Math.min(0.55 + tick * 0.07, 0.95);
     let orderedToEvacuate = 0;
-    for (const [zoneId, status] of Object.entries(this.state.evacuation.zones)) {
+    const allZoneStatuses = { ...this.state.evacuation.derivedZones, ...this.state.evacuation.zones };
+    for (const [zoneId, status] of Object.entries(allZoneStatuses)) {
       if (status === 'mandatory') {
         orderedToEvacuate += getZonePop(zoneId);
       }
@@ -495,7 +498,7 @@ class StateManager {
     const shelterIntakeUsed = new Map();
 
     for (const flow of this.state.evacuation.flows) {
-      const zoneStatus = this.state.evacuation.zones[flow.from_zone] || 'clear';
+      const zoneStatus = this.state.evacuation.zones[flow.from_zone] ?? this.state.evacuation.derivedZones[flow.from_zone] ?? 'clear';
       const currentShelter = this.state.resources.shelters?.[flow.to_shelter];
       const currentShelterOccupancy = Number(shelterOccupancy.get(flow.to_shelter) || currentShelter?.occupancy || 0);
       const currentShelterCapacity = Number(currentShelter?.capacity || this.state.baseData?.shelters?.[flow.to_shelter]?.capacity || 0);
@@ -776,8 +779,9 @@ class StateManager {
 
   _computePopulationAtRisk() {
     const baseZones = this.state.baseData?.zones || {};
+    const allZoneStatuses = { ...this.state.evacuation.derivedZones, ...this.state.evacuation.zones };
     let atRisk = 0;
-    for (const [zoneId, status] of Object.entries(this.state.evacuation.zones)) {
+    for (const [zoneId, status] of Object.entries(allZoneStatuses)) {
       const pop = baseZones[zoneId]?.population || 5000;
       if (status === 'mandatory') atRisk += pop;
       else if (status === 'warning') atRisk += pop * 0.4;
@@ -894,6 +898,7 @@ class StateManager {
         perimeter_geojson: this.state.fire.perimeter_geojson,
         acres_burned: this.state.fire.acres_burned,
         spread_rate_acres_hr: this.state.fire.spread_rate_acres_hr,
+        suppression_zones: this.state.fire.suppression_zones.map(z => ({ ...z })),
       },
       evacuation: {
         zones: { ...this.state.evacuation.zones },
@@ -905,16 +910,21 @@ class StateManager {
         routes_closed: this.state.evacuation.routes_closed,
         total_population_at_risk: this._computePopulationAtRisk(),
         congested_routes: (this.state.evacuation.route_congestion || []).filter(r => r.status === 'congested').length,
+        closed_routes: [...this.state.evacuation.closed_routes],
+        route_congestion: this.state.evacuation.route_congestion.map(r => ({ ...r })),
+        traffic_jams: this.state.evacuation.traffic_jams.map(j => ({ ...j })),
       },
       resources: {
         engines_deployed: this.state.resources.engines_deployed,
         crews_deployed: this.state.resources.crews_deployed,
         air_tankers_active: this.state.resources.air_tankers_active,
         shelters: { ...this.state.resources.shelters },
+        deployments: this.state.resources.deployments.map(d => ({ ...d })),
       },
       infrastructure: {
         facilities_offline: this.state.infrastructure.facilities_offline,
         power_shutoff_areas: this.state.infrastructure.power_shutoff_areas,
+        facilities: { ...this.state.infrastructure.facilities },
       },
     };
   }
@@ -924,7 +934,9 @@ class StateManager {
     const base = s.baseData || {};
 
     // Priority-sort zones: mandatory first, then warning, then others — cap at 25
-    const sortedZones = Object.entries(s.evacuation.zones)
+    // Union of explicit + derived so agents have full situational awareness
+    const allZoneStatuses = { ...s.evacuation.derivedZones, ...s.evacuation.zones };
+    const sortedZones = Object.entries(allZoneStatuses)
       .sort(([, a], [, b]) => {
         const rank = { mandatory: 0, warning: 1, voluntary: 2, clear: 3 };
         return (rank[a] ?? 4) - (rank[b] ?? 4);
