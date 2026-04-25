@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ember — Wildfire Incident Command",
+  title: "PyroTech — Wildfire Incident Command",
   description: "Multi-agent wildfire incident command simulation for emergency response planning",
 };
 

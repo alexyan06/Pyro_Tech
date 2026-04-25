@@ -1,6 +1,6 @@
 /**
  * fetch_overpass.js
- * Ember Wildfire Simulation — LAHacks 2026
+ * PyroTech Wildfire Simulation — LAHacks 2026
  *
  * Fetches infrastructure data (hospitals, fire stations) for LA County from
  * the OpenStreetMap Overpass API and writes GeoJSON files.

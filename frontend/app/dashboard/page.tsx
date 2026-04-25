@@ -137,7 +137,7 @@ export default function Home() {
       let zonesGeo: GeoJSONCollection = EMPTY_GEOJSON;
 
       // 1. Try to load from pre-fetched promise in window
-      const bundlePromise = (window as unknown as Record<string, Promise<unknown>>).__EMBER_GEOJSON_PROMISE__;
+      const bundlePromise = (window as unknown as Record<string, Promise<unknown>>).__PYROTECH_GEOJSON_PROMISE__;
       if (bundlePromise) {
         try {
           const bundle = await bundlePromise as Record<string, unknown>;
@@ -148,15 +148,15 @@ export default function Home() {
             popGeo = (bundle.population_tracts as GeoJSONCollection | undefined) ?? EMPTY_GEOJSON;
             routesGeo = (bundle.evacuation_routes as GeoJSONCollection | undefined) ?? EMPTY_GEOJSON;
             zonesGeo = (bundle.evacuation_zones as GeoJSONCollection | undefined) ?? EMPTY_GEOJSON;
-            console.log('[Ember] Using pre-fetched GeoJSON bundle from window promise');
+            console.log('[PyroTech] Using pre-fetched GeoJSON bundle from window promise');
           }
         } catch { /* fallback to fetch */ }
-        delete (window as unknown as Record<string, unknown>).__EMBER_GEOJSON_PROMISE__;
+        delete (window as unknown as Record<string, unknown>).__PYROTECH_GEOJSON_PROMISE__;
       }
 
       // 2. Fallback to individual fetches if bundle was missing or failed
       if (sheltersGeo.features.length === 0) {
-        console.log('[Ember] Fetching GeoJSON layers individually...');
+        console.log('[PyroTech] Fetching GeoJSON layers individually...');
         [sheltersGeo, hospitalsGeo, stationsGeo, popGeo, routesGeo, zonesGeo] =
           await Promise.all([
             fetchGeoJSON('shelters.geojson',           bust).catch(() => EMPTY_GEOJSON),
@@ -236,7 +236,7 @@ export default function Home() {
         zones,
       });
     } catch (err) {
-      console.warn('[Ember] Could not seed base data:', err);
+      console.warn('[PyroTech] Could not seed base data:', err);
     }
   }, [dispatch]);
 
@@ -378,7 +378,7 @@ export default function Home() {
   // On mount: load scenario from sessionStorage, redirect to setup if missing
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem('ember_scenario');
+      const raw = sessionStorage.getItem('pyrotech_scenario');
       if (!raw) {
         router.push('/');
         return;
@@ -466,7 +466,7 @@ export default function Home() {
             color: 'var(--accent)',
             margin: 0,
           }}>
-            EMBER
+            PYROTECH
           </h1>
           <span style={{
             fontFamily: 'var(--font-condensed)',
