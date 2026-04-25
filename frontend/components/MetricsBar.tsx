@@ -8,33 +8,57 @@ interface MetricsBarProps {
   simTimeString?: string;
 }
 
-interface StatCardProps {
+interface MetricItemProps {
   label: string;
   value: string | number;
-  icon: string;
   color: string;
+  primary?: boolean;
 }
 
-function StatCard({ label, value, icon, color }: StatCardProps) {
+function MetricItem({ label, value, color, primary }: MetricItemProps) {
   return (
-    <div
-      className="flex items-center gap-3 rounded-lg border px-4 py-2"
-      style={{
-        borderColor: color + '33',
-        background: color + '0a',
-      }}
-    >
-      <span className="text-lg">{icon}</span>
-      <div>
-        <p
-          className="text-lg font-bold tabular-nums transition-all duration-500"
-          style={{ color }}
-        >
-          {value}
-        </p>
-        <p className="text-xs text-gray-500">{label}</p>
-      </div>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      padding: primary ? '0 22px 0 0' : '0 18px',
+      gap: '3px',
+      flexShrink: 0,
+    }}>
+      <span style={{
+        fontFamily: 'var(--font-mono)',
+        fontSize: primary ? '1.15rem' : '0.96rem',
+        fontWeight: 600,
+        lineHeight: 1,
+        color,
+        fontVariantNumeric: 'tabular-nums',
+        letterSpacing: '0.02em',
+        transition: 'all 0.5s ease-out',
+      }}>
+        {value}
+      </span>
+      <span style={{
+        fontFamily: 'var(--font-condensed)',
+        fontSize: '0.64rem',
+        letterSpacing: '0.12em',
+        textTransform: 'uppercase' as const,
+        color: 'var(--text-secondary)',
+        whiteSpace: 'nowrap' as const,
+      }}>
+        {label}
+      </span>
     </div>
+  );
+}
+
+function Divider() {
+  return (
+    <div style={{
+      width: '1px',
+      height: '28px',
+      background: 'var(--border)',
+      flexShrink: 0,
+    }} />
   );
 }
 
@@ -51,7 +75,6 @@ function useCountUp(target: number, duration = 1000): number {
     const step = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       setDisplayed(Math.round(start + (target - start) * eased));
       if (progress < 1) {
@@ -63,10 +86,7 @@ function useCountUp(target: number, duration = 1000): number {
 
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(step);
-
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    };
+    return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); };
   }, [target, duration]);
 
   return displayed;
@@ -76,139 +96,110 @@ export default function MetricsBar({ snapshot, simTimeString }: MetricsBarProps)
   const acresBurnedTarget = snapshot?.fire.acres_burned ?? 0;
   const animatedAcres = useCountUp(acresBurnedTarget);
 
+  const baseStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    borderBottom: '1px solid var(--border)',
+    background: 'var(--surface)',
+    padding: '0 1rem',
+    height: '54px',
+    overflowX: 'auto',
+    gap: 0,
+    flexShrink: 0,
+  };
+
   if (!snapshot) {
     return (
-      <div
-        className="flex items-center gap-4 border-b px-4 py-3"
-        style={{
-          borderColor: 'var(--border)',
-          background: 'var(--panel-bg)',
-        }}
-      >
-        <StatCard
-          label="Acres Burned"
-          value="--"
-          icon={'\u{1F525}'}
-          color="var(--accent-red)"
-        />
-        <StatCard
-          label="Evacuees"
-          value="--"
-          icon={'\u{1F6B6}'}
-          color="var(--accent-blue)"
-        />
-        <StatCard
-          label="Shelters"
-          value="--"
-          icon={'\u{1F3E0}'}
-          color="var(--accent-green)"
-        />
-        <StatCard
-          label="Routes Closed"
-          value="--"
-          icon={'\u{26D4}'}
-          color="var(--accent-orange)"
-        />
-        <StatCard
-          label="Facilities Offline"
-          value="--"
-          icon={'\u{26A0}\u{FE0F}'}
-          color="var(--accent-yellow)"
-        />
-        <StatCard
-          label="Pop. at Risk"
-          value="--"
-          icon={'\u{26A0}'}
-          color="#e879f9"
-        />
-        <StatCard
-          label="Congested Routes"
-          value="--"
-          icon={'\u{1F6A6}'}
-          color="#f97316"
-        />
-        <div className="ml-auto text-xs text-gray-600">
-          Awaiting simulation...
+      <div style={baseStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+          <MetricItem label="Acres Burned"  value="—" color="var(--accent-red)"    primary />
+          <Divider />
+          <MetricItem label="Evacuees"      value="—" color="var(--accent-blue)"   />
+          <Divider />
+          <MetricItem label="Shelter"       value="—" color="var(--accent-green)"  />
+          <Divider />
+          <MetricItem label="Routes Closed" value="—" color="var(--accent-orange)" />
+          <Divider />
+          <MetricItem label="Offline"       value="—" color="var(--accent-yellow)" />
+          <Divider />
+          <MetricItem label="Pop. at Risk"  value="—" color="var(--accent-purple)" />
+          <Divider />
+          <MetricItem label="Congested"     value="—" color="var(--accent-orange)" />
         </div>
+        <span style={{
+          fontFamily: 'var(--font-condensed)',
+          fontSize: '0.66rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          marginLeft: 'auto',
+          paddingLeft: '1rem',
+          flexShrink: 0,
+        }}>
+          Awaiting simulation
+        </span>
       </div>
     );
   }
 
   const { fire, evacuation, resources, infrastructure } = snapshot;
 
-  // Calculate shelter capacity percentage
   const shelterEntries = Object.values(resources.shelters);
-  const totalOccupancy = shelterEntries.reduce(
-    (sum, s) => sum + s.occupancy,
-    0,
-  );
-  const totalCapacity = shelterEntries.reduce(
-    (sum, s) => sum + s.capacity,
-    0,
-  );
-  const shelterPct =
-    totalCapacity > 0
-      ? `${Math.round((totalOccupancy / totalCapacity) * 100)}%`
-      : '0%';
+  const totalOccupancy = shelterEntries.reduce((sum, s) => sum + s.occupancy, 0);
+  const totalCapacity  = shelterEntries.reduce((sum, s) => sum + s.capacity, 0);
+  const shelterPct = totalCapacity > 0
+    ? `${Math.round((totalOccupancy / totalCapacity) * 100)}%`
+    : '0%';
 
   return (
-    <div
-      className="flex items-center gap-4 border-b px-4 py-3"
-      style={{
-        borderColor: 'var(--border)',
-        background: 'var(--panel-bg)',
-      }}
-    >
-      <StatCard
-        label="Acres Burned"
-        value={animatedAcres.toLocaleString()}
-        icon={'\u{1F525}'}
-        color="var(--accent-red)"
-      />
-      <StatCard
-        label="Evacuees"
-        value={evacuation.total_evacuees.toLocaleString()}
-        icon={'\u{1F6B6}'}
-        color="var(--accent-blue)"
-      />
-      <StatCard
-        label="Shelters"
-        value={shelterPct}
-        icon={'\u{1F3E0}'}
-        color="var(--accent-green)"
-      />
-      <StatCard
-        label="Routes Closed"
-        value={evacuation.routes_closed}
-        icon={'\u{26D4}'}
-        color="var(--accent-orange)"
-      />
-      <StatCard
-        label="Facilities Offline"
-        value={infrastructure.facilities_offline}
-        icon={'\u{26A0}\u{FE0F}'}
-        color="var(--accent-yellow)"
-      />
-      <StatCard
-        label="Pop. at Risk"
-        value={evacuation.total_population_at_risk?.toLocaleString() ?? 0}
-        icon={'\u{26A0}'}
-        color="#e879f9"
-      />
-      <StatCard
-        label="Congested Routes"
-        value={evacuation.congested_routes ?? 0}
-        icon={'\u{1F6A6}'}
-        color="#f97316"
-      />
-      <div className="ml-auto text-right">
-        <p className="text-xs text-gray-500">Sim Time</p>
-        <p className="font-mono text-sm text-gray-300">
+    <div style={baseStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+        <MetricItem label="Acres Burned"  value={animatedAcres.toLocaleString()}                            color="var(--accent-red)"    primary />
+        <Divider />
+        <MetricItem label="Evacuees"      value={evacuation.total_evacuees.toLocaleString()}                color="var(--accent-blue)"   />
+        <Divider />
+        <MetricItem label="Shelter"       value={shelterPct}                                                color="var(--accent-green)"  />
+        <Divider />
+        <MetricItem label="Routes Closed" value={evacuation.routes_closed}                                  color="var(--accent-orange)" />
+        <Divider />
+        <MetricItem label="Offline"       value={infrastructure.facilities_offline}                         color="var(--accent-yellow)" />
+        <Divider />
+        <MetricItem label="Pop. at Risk"  value={evacuation.total_population_at_risk?.toLocaleString() ?? 0} color="var(--accent-purple)" />
+        <Divider />
+        <MetricItem label="Congested"     value={evacuation.congested_routes ?? 0}                          color="var(--accent-orange)" />
+      </div>
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        paddingLeft: '1.25rem',
+        flexShrink: 0,
+        borderLeft: '1px solid var(--border)',
+        marginLeft: '0.5rem',
+        paddingTop: '2px',
+        paddingBottom: '2px',
+      }}>
+        <span style={{
+          fontFamily: 'var(--font-condensed)',
+          fontSize: '0.62rem',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+        }}>
+          Sim Time
+        </span>
+        <span className="sim-clock">
           {simTimeString || snapshot.sim_time}
-        </p>
-        <p className="text-xs text-gray-600">
-          {fire.spread_rate_acres_hr.toFixed(0)} ac/hr spread rate
-        </p>
+        </span>
+        <span style={{
+          fontFamily: 'var(--font-condensed)',
+          fontSize: '0.62rem',
+          color: 'var(--text-secondary)',
+          letterSpacing: '0.06em',
+        }}>
+          {fire.spread_rate_acres_hr.toFixed(0)} ac/hr spread
+        </span>
       </div>
     </div>
   );

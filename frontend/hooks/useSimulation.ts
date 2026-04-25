@@ -46,6 +46,7 @@ function formatSimDate(simDate: Date): string {
 export function useSimulation(options: UseSimulationOptions = {}) {
   const [isConnected, setIsConnected]   = useState(false);
   const [isRunning, setIsRunning]       = useState(false);
+  const [isPaused, setIsPaused]         = useState(false);
   const [agentMessages, setAgentMessages] = useState<Map<AgentName, string[]>>(new Map());
   // Flat chronological list for in-order rendering
   const [timeline, setTimeline]         = useState<Array<{ agent: AgentName; text: string }>>([]);
@@ -110,7 +111,7 @@ export function useSimulation(options: UseSimulationOptions = {}) {
   }, []);
 
   useEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning || isPaused) return;
 
     const interval = window.setInterval(() => {
       const base = simClockBaseRef.current;
@@ -121,7 +122,7 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     }, 250);
 
     return () => window.clearInterval(interval);
-  }, [isRunning]);
+  }, [isRunning, isPaused]);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -300,8 +301,14 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     [send],
   );
 
-  const pause   = useCallback(() => send({ type: 'control', payload: { action: 'pause' } }),   [send]);
-  const resume  = useCallback(() => send({ type: 'control', payload: { action: 'resume' } }),  [send]);
+  const pause = useCallback(() => {
+    setIsPaused(true);
+    send({ type: 'control', payload: { action: 'pause' } });
+  }, [send]);
+  const resume = useCallback(() => {
+    setIsPaused(false);
+    send({ type: 'control', payload: { action: 'resume' } });
+  }, [send]);
   const stop    = useCallback(() => { send({ type: 'control', payload: { action: 'stop' } }); setIsRunning(false); }, [send]);
   const requestPlaybook = useCallback(() => send({ type: 'request_playbook', payload: {} }), [send]);
 
@@ -329,7 +336,7 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     agentConfidence,
     branchId, branchRunning, branchModifier, branchMessages,
     connect, disconnect, startSimulation,
-    pause, resume, stop, requestPlaybook,
+    pause, resume, stop, isPaused, requestPlaybook,
     startBranch, clearBranch,
   };
 }

@@ -160,9 +160,12 @@ class TurnSequencer {
       });
 
       // Trip waypoints for car layer (every 4 physics ticks = 2 real seconds)
+      // Skip traffic refresh here when the % 20 block will call it in the same tick
       if (physicsCount % 4 === 0) {
         const baseData = this.stateManager.state.baseData || {};
-        this._refreshTrafficState(ws, elapsedSimHours, this._agentRunCount);
+        if (physicsCount % 20 !== 0) {
+          this._refreshTrafficState(ws, elapsedSimHours, this._agentRunCount);
+        }
         // scenario.bbox is stored as [west, south, east, north] — same shape particleEngine expects.
         const sbx = this.stateManager.state.scenario?.bbox;
         const normBbox = Array.isArray(sbx) && sbx.length === 4 ? sbx.slice() : null;
@@ -258,19 +261,27 @@ class TurnSequencer {
       ws, agentRun, elapsedHours,
     );
     const cycleOutputs = [disasterOut];
-    await new Promise(r => setTimeout(r, 800));
+    if (this.stopped) return;
+    await this._interruptibleDelay(800);
 
     // Run sequentially to avoid Gemini rate limits
+    if (this.stopped) return;
     const evacOut = await this._runAgent(evacuationAgent, this._buildContext(scenarioInput, agentRun, simTimeStr, elapsedHours, weather, cycleOutputs), ws, agentRun, elapsedHours);
 
     // Guarantee at least one evacuation flow per cycle so cars/particles have something to animate.
     this._ensureEvacuationFlow(ws, agentRun, elapsedHours);
 
-    await new Promise(r => setTimeout(r, 800));
+    if (this.stopped) return;
+    await this._interruptibleDelay(800);
+
+    if (this.stopped) return;
     const congestionOut = await this._runAgent(congestionAgent, this._buildContext(scenarioInput, agentRun, simTimeStr, elapsedHours, weather, cycleOutputs), ws, agentRun, elapsedHours);
     cycleOutputs.push(evacOut, congestionOut);
 
-    await new Promise(r => setTimeout(r, 800));
+    if (this.stopped) return;
+    await this._interruptibleDelay(800);
+
+    if (this.stopped) return;
     const resourceOut = await this._runAgent(
       resourceAgent,
       this._buildContext(scenarioInput, agentRun, simTimeStr, elapsedHours, weather, cycleOutputs),
@@ -278,8 +289,11 @@ class TurnSequencer {
     );
     this._ensureGroundResourceDeployment(ws, resourceOut, agentRun, elapsedHours);
     cycleOutputs.push(resourceOut);
-    await new Promise(r => setTimeout(r, 800));
 
+    if (this.stopped) return;
+    await this._interruptibleDelay(800);
+
+    if (this.stopped) return;
     await this._runAgent(
       synthesisAgent,
       this._buildContext(scenarioInput, agentRun, simTimeStr, elapsedHours, weather, cycleOutputs),
@@ -300,9 +314,21 @@ class TurnSequencer {
     return Math.min(durationHours, start + (target - start) * progress);
   }
 
+  async _interruptibleDelay(ms) {
+    const deadline = Date.now() + ms;
+    while (Date.now() < deadline) {
+      if (this.stopped) return;
+      await new Promise(r => setTimeout(r, 50));
+    }
+  }
+
   async _runAgent(agent, context, ws, tick, elapsedHours) {
     let fullText = '';
     for await (const chunk of agent.stream(context)) {
+      while (this.paused && !this.stopped) {
+        await new Promise(r => setTimeout(r, 100));
+      }
+      if (this.stopped) break;
       fullText += chunk;
       this._sendAgentText(ws, agent.name, chunk, false);
     }
@@ -800,8 +826,17 @@ class TurnSequencer {
     });
   }
 
-  pause() { this.paused = true; }
-  resume() { this.paused = false; }
+  pause() {
+    this.paused = true;
+    this._pausedAtWallMs = Date.now();
+  }
+  resume() {
+    if (this._pausedAtWallMs != null) {
+      this._cycleStartWallMs += Date.now() - this._pausedAtWallMs;
+      this._pausedAtWallMs = null;
+    }
+    this.paused = false;
+  }
   stop() { this.stopped = true; }
 
   /**

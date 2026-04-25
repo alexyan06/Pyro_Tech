@@ -67,12 +67,27 @@ async function fetchGeoJSON(filename: string, bust?: string): Promise<GeoJSONCol
 const EMPTY_GEOJSON: GeoJSONCollection = { type: 'FeatureCollection', features: [] };
 
 function SimControl({ label, onClick, danger, purple }: { label: string; onClick: () => void; danger?: boolean; purple?: boolean }) {
-  const color = danger ? 'var(--accent-red)' : purple ? 'var(--accent-purple)' : 'var(--text-primary, #d1d5db)';
+  const color = danger ? 'var(--accent-red)' : purple ? 'var(--accent-purple)' : 'var(--text-secondary)';
   return (
     <button
       onClick={onClick}
-      className="h-8 rounded-lg border px-4 text-xs transition-colors hover:bg-gray-800"
-      style={{ borderColor: 'var(--border)', color }}
+      style={{
+        height: '30px',
+        border: `1px solid var(--border)`,
+        borderRadius: '2px',
+        padding: '0 14px',
+        background: 'transparent',
+        color,
+        fontFamily: 'var(--font-condensed)',
+        fontSize: '0.72rem',
+        fontWeight: 600,
+        letterSpacing: '0.12em',
+        textTransform: 'uppercase',
+        cursor: 'pointer',
+        transition: 'background 0.15s, border-color 0.15s',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-raised)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
       {label}
     </button>
@@ -83,7 +98,6 @@ export default function Home() {
   const router = useRouter();
   const { mapState, dispatch, reset } = useMapState();
   const [showPlaybook, setShowPlaybook] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const { enqueue: enqueueAudio, isMuted, toggleMute } = useAgentAudio();
   const [storedScenario, setStoredScenario] = useState<StoredScenario | null>(null);
   const [notifications, setNotifications] = useState<MapNotification[]>([]);
@@ -300,6 +314,7 @@ export default function Home() {
     pause,
     resume,
     stop,
+    isPaused,
     requestPlaybook,
     startBranch,
     clearBranch,
@@ -395,47 +410,102 @@ export default function Home() {
     <div className="flex h-screen flex-col" style={{ background: 'var(--background)' }}>
       {/* Header */}
       <div
-        className="flex items-center justify-between border-b px-4 py-2"
-        style={{ borderColor: 'var(--border)', background: 'var(--panel-bg)' }}
+        className="flex items-center justify-between px-4"
+        style={{
+          borderBottom: '1px solid var(--border)',
+          borderTop: '2px solid var(--accent)',
+          background: 'var(--panel-bg)',
+          height: '44px',
+          flexShrink: 0,
+        }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center" style={{ gap: '12px' }}>
           <Link
             href="/"
-            className="rounded border px-2 py-1 text-xs text-gray-500 transition-colors hover:text-gray-300"
-            style={{ borderColor: 'var(--border)' }}
+            style={{
+              fontFamily: 'var(--font-condensed)',
+              fontSize: '0.65rem',
+              fontWeight: 600,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              border: '1px solid var(--border)',
+              borderRadius: '2px',
+              padding: '3px 8px',
+              textDecoration: 'none',
+              transition: 'color 0.15s',
+            }}
           >
             ← Setup
           </Link>
-          <h1
-            className="text-xl font-bold tracking-wider"
-            style={{ color: 'var(--accent-red)' }}
-          >
+          <div style={{ width: '1px', height: '18px', background: 'var(--border)' }} />
+          <h1 style={{
+            fontFamily: 'var(--font-condensed)',
+            fontSize: '1.2rem',
+            fontWeight: 800,
+            letterSpacing: '0.1em',
+            color: 'var(--accent)',
+            margin: 0,
+          }}>
             EMBER
           </h1>
-          <span className="text-xs text-gray-600">Wildfire Disaster Simulation</span>
+          <span style={{
+            fontFamily: 'var(--font-condensed)',
+            fontSize: '0.65rem',
+            fontWeight: 500,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+          }}>
+            ICS Unified Command
+          </span>
         </div>
+
         {simTimeString && (
           <div className="flex flex-col items-center">
-            <span className="sim-clock-label">SIM CLOCK</span>
-            <span className="sim-clock">
-              {simTimeString}
-            </span>
+            <span className="sim-clock-label">Incident Clock</span>
+            <span className="sim-clock">{simTimeString}</span>
           </div>
         )}
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center" style={{ gap: '10px' }}>
           <button
             onClick={toggleMute}
             title={isMuted ? 'Unmute agent voices' : 'Mute agent voices'}
-            className="rounded-lg border px-2 py-1 text-xs transition-colors hover:bg-gray-800"
-            style={{ borderColor: 'var(--border)', color: isMuted ? 'var(--accent-red)' : 'var(--accent-green)' }}
+            style={{
+              fontFamily: 'var(--font-condensed)',
+              fontSize: '0.65rem',
+              fontWeight: 600,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              border: '1px solid var(--border)',
+              borderRadius: '2px',
+              padding: '3px 8px',
+              background: 'transparent',
+              color: isMuted ? 'var(--accent-red)' : 'var(--accent-green)',
+              cursor: 'pointer',
+            }}
           >
-            {isMuted ? '🔇' : '🔊'}
+            {isMuted ? 'Audio Off' : 'Audio On'}
           </button>
+          <div style={{ width: '1px', height: '14px', background: 'var(--border)' }} />
           <span
-            className="h-2 w-2 rounded-full"
-            style={{ background: isConnected ? 'var(--accent-green)' : 'var(--accent-red)' }}
+            style={{
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              background: isConnected ? 'var(--accent-green)' : 'var(--accent-red)',
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
           />
-          <span className="text-xs text-gray-500">
+          <span style={{
+            fontFamily: 'var(--font-condensed)',
+            fontSize: '0.65rem',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+          }}>
             {isConnected ? 'Connected' : 'Disconnected'}
           </span>
         </div>
@@ -455,10 +525,19 @@ export default function Home() {
           <MapNotifications notifications={notifications} />
           {isRunning && (
             <div
-              className="animate-pulse-glow absolute left-4 top-4 rounded-lg px-3 py-1 text-xs font-semibold"
-              style={{ background: 'var(--accent-red)', color: 'white' }}
+              className="animate-pulse-glow absolute left-4 top-4"
+              style={{
+                background: 'var(--accent-red)',
+                color: 'oklch(96% 0.003 24)',
+                fontFamily: 'var(--font-condensed)',
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                padding: '4px 10px',
+              }}
             >
-              SIMULATION ACTIVE
+              Simulation Active
             </div>
           )}
           {/* What-If Branch Panel */}
@@ -481,8 +560,16 @@ export default function Home() {
             className="border-b px-4 py-2"
             style={{ borderColor: 'var(--border)', background: 'var(--panel-bg)' }}
           >
-            <h2 className="text-sm font-semibold text-gray-400">
-              WAR ROOM — AGENT FEED
+            <h2 style={{
+              fontFamily: 'var(--font-condensed)',
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              margin: 0,
+            }}>
+              Agent Transmissions
             </h2>
           </div>
           <div className="min-h-0 flex-1">
@@ -514,13 +601,22 @@ export default function Home() {
       >
         {isRunning ? (
           <>
-            <SimControl label={isPaused ? 'Resume' : 'Pause'} onClick={() => { if (isPaused) { resume(); setIsPaused(false); } else { pause(); setIsPaused(true); } }} />
+            <SimControl label={isPaused ? 'Resume' : 'Pause'} onClick={() => { if (isPaused) { resume(); } else { pause(); } }} />
             <SimControl label="Stop" danger onClick={stop} />
             <SimControl label="Playbook" purple onClick={requestPlaybook} />
           </>
         ) : (
-          <Link href="/" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
-            ← Configure new scenario
+          <Link href="/" style={{
+            fontFamily: 'var(--font-condensed)',
+            fontSize: '0.65rem',
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+            textDecoration: 'none',
+            transition: 'color 0.15s',
+          }}>
+            ← Configure New Scenario
           </Link>
         )}
       </div>
