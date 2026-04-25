@@ -10,10 +10,10 @@ export interface ScenarioInput {
   fireOrigin: { lat: number; lng: number };
   /** Observed or forecast weather metrics at simulation start */
   metrics: {
-    /** Wind speed in mph */
-    wind: number;
-    /** Wind direction in degrees, 0=N, 90=E */
-    windDirection?: number;
+    /** Eastward wind component in m/s (positive = blowing east) */
+    windU: number;
+    /** Northward wind component in m/s (positive = blowing north) */
+    windV: number;
     /** Temperature in °F */
     temp: number;
     /** Relative humidity 0–100 */
@@ -269,7 +269,8 @@ export type MapEventData =
       origin: [number, number] | null;
       head: [number, number] | null;
       bearing: number;
-      wind_speed: number;
+      wind_u: number;
+      wind_v: number;
       spread_rate_acres_hr: number;
       spot_fire_count?: number;
       elapsed_hours?: number;

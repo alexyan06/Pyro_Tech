@@ -43,7 +43,7 @@ function setupWebSocket(server) {
  * Rejects legacy free-text `scenario` payloads entirely.
  *
  * Expected shape:
- *   { location, bbox, timestamp, fireOrigin: {lat, lng}, metrics: {wind, windDirection?, temp, humidity}, initialAcres?, durationHours? }
+ *   { location, bbox, timestamp, fireOrigin: {lat, lng}, metrics: {windU, windV, temp, humidity}, initialAcres?, durationHours? }
  *
  * @param {Record<string, unknown>} payload
  * @returns {{ valid: boolean, errors: string[] }}
@@ -91,24 +91,12 @@ function validateScenarioPayload(payload) {
   const m = payload.metrics;
   if (
     !m || typeof m !== 'object' ||
-    typeof m.wind !== 'number' ||
+    typeof m.windU !== 'number' || !Number.isFinite(m.windU) ||
+    typeof m.windV !== 'number' || !Number.isFinite(m.windV) ||
     typeof m.temp !== 'number' ||
     typeof m.humidity !== 'number'
   ) {
-    errors.push('metrics must be an object with numeric wind, temp, and humidity fields');
-  }
-
-  if (
-    m && typeof m === 'object' &&
-    m.windDirection !== undefined &&
-    (
-      typeof m.windDirection !== 'number' ||
-      !Number.isFinite(m.windDirection) ||
-      m.windDirection < 0 ||
-      m.windDirection >= 360
-    )
-  ) {
-    errors.push('metrics.windDirection must be a number from 0 to 359');
+    errors.push('metrics must be an object with numeric windU, windV, temp, and humidity fields');
   }
 
   if (

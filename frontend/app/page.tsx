@@ -88,8 +88,13 @@ export default function SetupPage() {
     if (!form.city.trim()) { setError('Location required.'); return; }
     setLoading(true);
     try {
-      const windSpeed = Number.parseFloat(form.windSpeed);
-      const windDirection = Number.parseFloat(form.windDirection);
+      const windSpeedMph = Number.parseFloat(form.windSpeed);
+      const windFromDeg = Number.parseFloat(form.windDirection);
+      // Convert UI (mph + FROM degrees) to U/V components (m/s) for unambiguous backend storage
+      const _speedMs = (Number.isFinite(windSpeedMph) ? windSpeedMph : 35) * 0.44704;
+      const _rad = (Number.isFinite(windFromDeg) ? windFromDeg : 45) * Math.PI / 180;
+      const windU = parseFloat((-_speedMs * Math.sin(_rad)).toFixed(4));
+      const windV = parseFloat((-_speedMs * Math.cos(_rad)).toFixed(4));
       const res = await fetch(`${API_BASE}/api/setup-scenario`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,8 +104,8 @@ export default function SetupPage() {
           fireLat: parseFloat(form.lat) || null,
           fireLng: parseFloat(form.lng) || null,
           initialAcres: parseFloat(form.acres) || 10,
-          windSpeed: Number.isFinite(windSpeed) ? windSpeed : 35,
-          windDirection: Number.isFinite(windDirection) ? windDirection : 45,
+          windU,
+          windV,
           durationHours: parseFloat(form.durationHours) || 6,
         }),
       });

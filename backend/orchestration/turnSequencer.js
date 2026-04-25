@@ -18,6 +18,34 @@ const PHYSICS_INTERVAL_MS = 500;  // physics update cadence (real ms)
 const LOGICAL_MINUTES_PER_CYCLE = 30;   // each agent cycle advances sim clock by 30 min
 const DEMO_AGENT_CYCLE_MS = 30_000; // smooth visual time between agent turns
 const DEFAULT_DURATION_HOURS = 6;
+
+// Default wind: 35 mph from NE (45° FROM) expressed as U/V components (m/s)
+const DEFAULT_WIND_U = parseFloat((-35 * 0.44704 * Math.sin(Math.PI / 4)).toFixed(4));
+const DEFAULT_WIND_V = parseFloat((-35 * 0.44704 * Math.cos(Math.PI / 4)).toFixed(4));
+
+/**
+ * Convert U/V wind components (m/s) to a human-readable string for agent prompts.
+ * Returns speed in mph and FROM direction in degrees.
+ */
+function uvToHuman(windU, windV) {
+  const speedMs = Math.sqrt(windU * windU + windV * windV);
+  const speedMph = Math.round(speedMs / 0.44704);
+  const toBearingDeg = ((Math.atan2(windU, windV) * 180 / Math.PI) + 360) % 360;
+  const fromDeg = Math.round((toBearingDeg + 180) % 360);
+  return { speedMph, fromDeg };
+}
+
+/**
+ * Convert FROM-degrees (meteorological) + speed (mph) to U/V components (m/s).
+ */
+function fromDegToUV(fromDeg, speedMph) {
+  const speedMs = speedMph * 0.44704;
+  const rad = fromDeg * Math.PI / 180;
+  return {
+    windU: parseFloat((-speedMs * Math.sin(rad)).toFixed(4)),
+    windV: parseFloat((-speedMs * Math.cos(rad)).toFixed(4)),
+  };
+}
 const MAX_TICKS = 6;    // kept for branch simulation compatibility
 
 function normalizeDurationHours(value) {
@@ -92,10 +120,10 @@ class TurnSequencer {
 
     // Start physics immediately with defaults; real weather updates the engine when it arrives.
     let weather = {
-      windSpeed:    metricsOverrides.wind        ?? 35,
-      windDirection: metricsOverrides.windDirection ?? 45,
-      temperature:  metricsOverrides.temp        ?? 75,
-      humidity:     metricsOverrides.humidity    ?? 30,
+      windU:        metricsOverrides.windU ?? DEFAULT_WIND_U,
+      windV:        metricsOverrides.windV ?? DEFAULT_WIND_V,
+      temperature:  metricsOverrides.temp  ?? 75,
+      humidity:     metricsOverrides.humidity ?? 30,
       windGusts:    40,
       pm25:         15,
     };
@@ -103,17 +131,18 @@ class TurnSequencer {
     // Kick off the weather fetch in the background — engine will be reseeded once it lands.
     fetchWeather(weatherLat, weatherLng).then(realWeather => {
       if (this.stopped) return;
-      if (metricsOverrides.wind         != null) realWeather.windSpeed     = metricsOverrides.wind;
-      if (metricsOverrides.windDirection != null) realWeather.windDirection = metricsOverrides.windDirection;
-      if (metricsOverrides.temp         != null) realWeather.temperature   = metricsOverrides.temp;
-      if (metricsOverrides.humidity     != null) realWeather.humidity      = metricsOverrides.humidity;
+      if (metricsOverrides.windU != null) realWeather.windU = metricsOverrides.windU;
+      if (metricsOverrides.windV != null) realWeather.windV = metricsOverrides.windV;
+      if (metricsOverrides.temp  != null) realWeather.temperature = metricsOverrides.temp;
+      if (metricsOverrides.humidity != null) realWeather.humidity = metricsOverrides.humidity;
       weather = realWeather;
       // Reseed engine with real weather values so physics reflects actual conditions
-      engine.windBearing = realWeather.windDirection || 45;
-      engine.windSpeed   = realWeather.windSpeed     || 40;
-      engine.humidity    = realWeather.humidity      ?? 30;
-      engine.temperature = realWeather.temperature   ?? 75;
-      engine.pm25        = realWeather.pm25          ?? 15;
+      const { windBearing: rb, windSpeed: rs } = WildfireEngine.uvToEngine(realWeather.windU ?? DEFAULT_WIND_U, realWeather.windV ?? DEFAULT_WIND_V);
+      engine.windBearing = rb;
+      engine.windSpeed   = rs;
+      engine.humidity    = realWeather.humidity    ?? 30;
+      engine.temperature = realWeather.temperature ?? 75;
+      engine.pm25        = realWeather.pm25        ?? 15;
       console.log('[Sequencer] Weather resolved (background):', realWeather);
     }).catch(err => {
       console.warn('[Sequencer] Weather fetch failed, using defaults:', err.message);
@@ -121,8 +150,7 @@ class TurnSequencer {
 
     console.log('[Sequencer] Starting physics with default weather; real weather fetching in background...');
 
-    const windBearing = weather.windDirection || 45;
-    const windSpeed = weather.windSpeed || 40;
+    const { windBearing, windSpeed } = WildfireEngine.uvToEngine(weather.windU, weather.windV);
     const engine = new WildfireEngine(
       [scenarioInput.fireOrigin.lng, scenarioInput.fireOrigin.lat],
       windBearing,
@@ -740,7 +768,8 @@ class TurnSequencer {
       origin,
       head,
       bearing: props.wind_bearing ?? this.stateManager.state.fire.spread_bearing ?? 0,
-      wind_speed: props.wind_speed ?? 0,
+      wind_u: props.wind_u ?? 0,
+      wind_v: props.wind_v ?? 0,
       spread_rate_acres_hr: props.spread_rate ?? this.stateManager.state.fire.spread_rate_acres_hr ?? 0,
       spot_fire_count: spotCount,
       elapsed_hours: elapsedHours,
@@ -831,7 +860,7 @@ class TurnSequencer {
       `BBOX (W,S,E,N): ${sc.bbox.join(', ')}`,
       `SIMULATION TIME: ${simTime}`,
       `TIME ELAPSED: ${formatElapsedHours(elapsedHours)} of ${formatElapsedHours(sc.durationHours || DEFAULT_DURATION_HOURS)} (Agent Run ${agentRun} — Continuous Real-Time Simulation)`,
-      `WEATHER CONDITIONS: Temperature ${weather.temperature}°F, Humidity ${weather.humidity}%, Wind ${weather.windSpeed}mph from ${weather.windDirection}° (gusts to ${weather.windGusts}mph)`,
+      (() => { const { speedMph, fromDeg } = uvToHuman(weather.windU ?? DEFAULT_WIND_U, weather.windV ?? DEFAULT_WIND_V); return `WEATHER CONDITIONS: Temperature ${weather.temperature}°F, Humidity ${weather.humidity}%, Wind ${speedMph}mph from ${fromDeg}° (gusts to ${weather.windGusts}mph)`; })(),
       `PM2.5 Air Quality: ${weather.pm25} µg/m³`,
       this.stateManager.getContext(),
       this._buildFireStationContext(sc.fireOrigin),
@@ -899,21 +928,28 @@ class TurnSequencer {
       branchState.state = forkedState;
 
       const branchAgents = this.agents.filter(a => BRANCH_AGENTS.includes(a.name));
-      const weather = { temperature: 75, humidity: 8, windSpeed: 70, windDirection: 45, windGusts: 95 };
+      // Branch weather starts as U/V equivalent of 70 mph from NE (45° FROM)
+      let branchFromDeg = 45;
+      let branchSpeedMph = 70;
+      const weather = { temperature: 75, humidity: 8, windGusts: 95 };
 
-      // Expanded weather parser
+      // Expanded weather parser — parse natural-language modifier into FROM degrees + mph
       const dirMap = {
         N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5, SE: 135, SSE: 157.5,
         S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5
       };
       for (const [dir, deg] of Object.entries(dirMap)) {
         if (new RegExp(`\\b${dir}\\b|${dir.toLowerCase()}`, 'i').test(scenarioModifier)) {
-          weather.windDirection = deg;
+          branchFromDeg = deg;
           break;
         }
       }
       const speedMatch = scenarioModifier.match(/(\d+)\s*mph/i);
-      if (speedMatch) weather.windSpeed = parseInt(speedMatch[1], 10);
+      if (speedMatch) branchSpeedMph = parseInt(speedMatch[1], 10);
+
+      const { windU: bWindU, windV: bWindV } = fromDegToUV(branchFromDeg, branchSpeedMph);
+      weather.windU = bWindU;
+      weather.windV = bWindV;
 
       const currentFire = forkedState.fire?.perimeter_geojson?.features?.[0];
       let fireCenter = [-118.53, 34.04];
@@ -923,11 +959,11 @@ class TurnSequencer {
         const cy = coords.reduce((s, c) => s + c[1], 0) / coords.length;
         fireCenter = [cx, cy];
       }
-      const { WildfireEngine } = require('../simulation/wildfireEngine');
-      const branchEngine = new WildfireEngine(
+      const { WildfireEngine: _BranchWE } = require('../simulation/wildfireEngine');
+      const branchEngine = _BranchWE.fromUV(
         fireCenter,
-        weather.windDirection,
-        weather.windSpeed,
+        weather.windU,
+        weather.windV,
         {
           humidity: weather.humidity,
           temperature: weather.temperature,
@@ -961,7 +997,7 @@ class TurnSequencer {
           `WHAT-IF BRANCH — MODIFIER: ${scenarioModifier}`,
           `DIVERGES FROM MAIN SIM AT ${formatElapsedHours(startElapsed)} ELAPSED`,
           `CURRENT BRANCH TIME: ${formatElapsedHours(elapsedHours)} elapsed`,
-          `WEATHER CHANGE: Wind ${weather.windSpeed}mph from ${weather.windDirection}°`,
+          (() => { const { speedMph, fromDeg } = uvToHuman(weather.windU, weather.windV); return `WEATHER CHANGE: Wind ${speedMph}mph from ${fromDeg}°`; })(),
           branchState.getContext(),
           branchOutputs.length > 0 ? '\nBRANCH PRIOR OUTPUTS:\n' + branchOutputs.map(o => `--- ${o.agent.toUpperCase()} ---\n${o.text.substring(0, 600)}`).join('\n') : '',
         ].join('\n\n');

@@ -18,18 +18,33 @@
  * @typedef {Object} WeatherData
  * @property {number} temperature   °F
  * @property {number} humidity      %
- * @property {number} windSpeed     mph
- * @property {number} windDirection degrees (0=N, 90=E)
+ * @property {number} windU         m/s eastward wind component (positive = blowing east)
+ * @property {number} windV         m/s northward wind component (positive = blowing north)
  * @property {number} windGusts     mph
  * @property {number} pm25          µg/m³ (PM2.5 concentration)
  * @property {boolean} isHistorical Whether historical API was used
  */
 
+/**
+ * Convert meteorological FROM-degrees + speed (mph) to U/V components (m/s).
+ * FROM convention: 0° = wind coming from north, blowing south.
+ */
+function fromDegToUV(fromDeg, speedMph) {
+  const speedMs = speedMph * 0.44704;
+  const rad = fromDeg * Math.PI / 180;
+  return {
+    windU: parseFloat((-speedMs * Math.sin(rad)).toFixed(4)),
+    windV: parseFloat((-speedMs * Math.cos(rad)).toFixed(4)),
+  };
+}
+
+// Default: 40 mph from 45° (NE) → fire spreads SW at ~17.9 m/s each component
+const _defUV = fromDegToUV(45, 40);
 const DEFAULTS = {
   temperature: 85,
   humidity: 10,
-  windSpeed: 40,
-  windDirection: 45,
+  windU: _defUV.windU,
+  windV: _defUV.windV,
   windGusts: 55,
   pm25: 15,
   isHistorical: false,
@@ -88,11 +103,12 @@ async function fetchHistoricalWeather(lat, lng, date) {
   const idx = h.time.findIndex(t => parseInt(t.slice(11, 13), 10) === hour);
   const i = idx >= 0 ? idx : hour; // fallback: use hour directly as index
 
+  const { windU, windV } = fromDegToUV(h.wind_direction_10m[i], h.wind_speed_10m[i]);
   return {
     temperature: h.temperature_2m[i],
     humidity: h.relative_humidity_2m[i],
-    windSpeed: h.wind_speed_10m[i],
-    windDirection: h.wind_direction_10m[i],
+    windU,
+    windV,
     windGusts: h.wind_gusts_10m[i],
     isHistorical: true,
   };
@@ -113,11 +129,12 @@ async function fetchLiveWeather(lat, lng) {
   const data = await res.json();
   const c = data.current;
 
+  const { windU, windV } = fromDegToUV(c.wind_direction_10m, c.wind_speed_10m);
   return {
     temperature: c.temperature_2m,
     humidity: c.relative_humidity_2m,
-    windSpeed: c.wind_speed_10m,
-    windDirection: c.wind_direction_10m,
+    windU,
+    windV,
     windGusts: c.wind_gusts_10m,
     isHistorical: false,
   };

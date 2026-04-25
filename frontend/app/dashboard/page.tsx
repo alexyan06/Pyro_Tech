@@ -33,7 +33,7 @@ interface StoredScenario {
   durationHours?: number;
   datetime: string;
   bbox: number[];
-  metrics?: { wind: number; windDirection?: number; temp: number; humidity: number };
+  metrics?: { windU: number; windV: number; temp: number; humidity: number };
   historical_mode?: boolean;
 }
 
@@ -411,7 +411,7 @@ export default function Home() {
       ],
       timestamp: storedScenario.datetime + (storedScenario.datetime.endsWith('Z') ? '' : ':00Z'),
       fireOrigin: { lat: storedScenario.fireLat, lng: storedScenario.fireLng },
-      metrics: storedScenario.metrics ?? { wind: 35, temp: 85, humidity: 15 },
+      metrics: storedScenario.metrics ?? { windU: -11.066, windV: -11.066, temp: 85, humidity: 15 },
       initialAcres: storedScenario.initialAcres ?? 10,
       historical_mode: storedScenario.historical_mode ?? false,
       durationHours: storedScenario.durationHours ?? 6,

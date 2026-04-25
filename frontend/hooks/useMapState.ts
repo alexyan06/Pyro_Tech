@@ -36,7 +36,8 @@ export interface FireBehaviorState {
   origin: [number, number] | null;
   head: [number, number] | null;
   bearing: number;
-  wind_speed: number;
+  wind_u: number;
+  wind_v: number;
   spread_rate_acres_hr: number;
   spot_fire_count?: number;
   elapsed_hours?: number;

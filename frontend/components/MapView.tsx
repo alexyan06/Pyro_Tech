@@ -16,6 +16,7 @@ import { createInfrastructureLayer } from './layers/infrastructureLayer';
 import { createShelterLayer } from './layers/shelterLayer';
 import { createResourceLayer } from './layers/resourceLayer';
 import MapLegend from './MapLegend';
+import WindCanvas from './WindCanvas';
 
 interface MapViewProps {
   mapState: MapState;
@@ -555,44 +556,6 @@ export default function MapView({ mapState, center }: MapViewProps) {
     }
   }, [center, setProgrammaticView]);
 
-  const fireBehaviorLayer = useMemo(() => {
-    const behavior = mapState.fireBehavior;
-    if (!behavior?.origin || !behavior.head) return null;
-
-    const features: GeoJSON.Feature[] = [
-      {
-        type: 'Feature',
-        properties: { kind: 'wind-vector', ...behavior },
-        geometry: {
-          type: 'LineString',
-          coordinates: [behavior.origin, behavior.head],
-        },
-      },
-      {
-        type: 'Feature',
-        properties: { kind: 'wind-head', ...behavior },
-        geometry: {
-          type: 'Point',
-          coordinates: behavior.head,
-        },
-      },
-    ];
-
-    return new GeoJsonLayer<GeoJSON.Feature>({
-      id: 'fire-behavior-vector',
-      data: features,
-      stroked: true,
-      filled: true,
-      pointType: 'circle',
-      getLineColor: [255, 190, 80, 230],
-      getLineWidth: 4,
-      lineWidthUnits: 'pixels',
-      getPointRadius: 8,
-      pointRadiusUnits: 'pixels',
-      getFillColor: [255, 235, 120, 230],
-      getText: () => '',
-    });
-  }, [mapState.fireBehavior]);
 
   // ── Evacuation zone polygons ───────────────────────────────────────────────
   const zoneLayer = useMemo(() => {
@@ -669,14 +632,13 @@ export default function MapView({ mapState, center }: MapViewProps) {
   const staticLayers = useMemo(() => [
     populationPointLayer,
     firmsLayer,
-    fireBehaviorLayer,
     zoneLayer,
     routeLayer,
     ...infrastructureLayers,
     ...shelterLayers,
     ...(resourceLayer || []),
   ].filter((l) => l !== null) as Layer[], [
-    populationPointLayer, firmsLayer, zoneLayer, routeLayer, fireBehaviorLayer,
+    populationPointLayer, firmsLayer, zoneLayer, routeLayer,
     infrastructureLayers, shelterLayers, resourceLayer
   ]);
 
@@ -744,6 +706,15 @@ export default function MapView({ mapState, center }: MapViewProps) {
           maxzoom={14}
         />
       </Map>
+
+      {mapState.fireBehavior && (
+        <WindCanvas
+          windU={mapState.fireBehavior.wind_u}
+          windV={mapState.fireBehavior.wind_v}
+          mapBearing={viewState.bearing}
+          mapPitch={viewState.pitch}
+        />
+      )}
 
       <MapOverlay
         mapState={mapState}
