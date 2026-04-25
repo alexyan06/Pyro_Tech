@@ -11,14 +11,9 @@ interface AgentFeedProps {
   currentText: string;
 }
 
-export default function AgentFeed({
-  timeline,
-  currentAgent,
-  currentText,
-}: AgentFeedProps) {
+export default function AgentFeed({ timeline, currentAgent, currentText }: AgentFeedProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Append in-progress streaming message at the end
   const allMessages = [
     ...timeline,
     ...(currentAgent && currentText ? [{ agent: currentAgent, text: currentText, isStreaming: true }] : []),
@@ -33,58 +28,121 @@ export default function AgentFeed({
   return (
     <div
       ref={scrollRef}
-      className="flex h-full flex-col gap-3 overflow-y-auto p-4"
-      style={{ background: 'var(--panel-bg)' }}
+      style={{
+        height: '100%',
+        overflowY: 'auto',
+        padding: '1.25rem 1rem',
+        background: 'var(--panel-bg)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0,
+      }}
     >
-      <div className="mb-2 text-xs italic text-gray-500">
-        Agent decisions update the map in real time.
-      </div>
-
       {allMessages.length === 0 && (
-        <div className="flex h-full items-center justify-center text-gray-600">
-          <p className="text-sm">Agent feed will appear here during simulation...</p>
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <p style={{
+            fontFamily: 'var(--font-condensed)',
+            fontSize: '0.72rem',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+          }}>
+            Awaiting agent transmissions
+          </p>
         </div>
       )}
 
       {allMessages.map((msg, i) => {
         const isStreaming = 'isStreaming' in msg && msg.isStreaming;
-        const config      = AGENT_CONFIG[msg.agent];
+        const config = AGENT_CONFIG[msg.agent];
         const isSecondary = msg.agent === 'infrastructure' || msg.agent === 'communications';
 
         return (
           <div
             key={`${msg.agent}-${i}`}
-            className="rounded-lg border px-3 py-2"
-            style={{ 
-              borderColor: config.color + '33', 
-              background: config.color + '0a',
-              opacity: isSecondary ? 0.7 : 1,
+            style={{
+              paddingTop: i === 0 ? 0 : '1.1rem',
+              paddingBottom: '1.1rem',
+              borderBottom: i < allMessages.length - 1
+                ? '1px solid var(--border-subtle)'
+                : 'none',
+              opacity: isSecondary ? 0.72 : 1,
             }}
           >
-            {/* Header row */}
-            <div className="mb-1 flex items-center gap-2">
-              <span className="text-sm">{config.emoji}</span>
-              <span
-                className="text-xs font-semibold uppercase tracking-wider"
-                style={{ color: config.color }}
-              >
+            {/* Callsign row */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '0.45rem',
+            }}>
+              <span style={{
+                fontFamily: 'var(--font-condensed)',
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: config.color,
+                flexShrink: 0,
+              }}>
                 {config.label}
               </span>
               {isSecondary && (
-                <span className="text-[10px] text-gray-500 ml-1 uppercase">(Support)</span>
+                <span style={{
+                  fontFamily: 'var(--font-condensed)',
+                  fontSize: '0.58rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--text-muted)',
+                }}>
+                  Support
+                </span>
               )}
+              <div style={{
+                flex: 1,
+                height: '1px',
+                background: config.color,
+                opacity: 0.15,
+              }} />
               {isStreaming && (
-                <span className="ml-auto text-xs text-gray-600 animate-pulse">
-                  streaming…
+                <span style={{
+                  fontFamily: 'var(--font-condensed)',
+                  fontSize: '0.58rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--text-muted)',
+                  flexShrink: 0,
+                  animation: 'pulse-glow 1.5s ease-in-out infinite',
+                }}>
+                  Transmitting
                 </span>
               )}
             </div>
 
-            {/* Message body — all JSON fences stripped */}
-            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed" style={{ color: isSecondary ? '#9ca3af' : '#d1d5db' }}>
+            {/* Message body */}
+            <p style={{
+              margin: 0,
+              fontSize: '0.84rem',
+              lineHeight: 1.65,
+              color: isSecondary ? 'var(--text-secondary)' : 'var(--text-primary)',
+              whiteSpace: 'pre-wrap',
+            }}>
               {sanitizeAgentText(msg.text)}
               {isStreaming && (
-                <span className="animate-pulse-glow ml-0.5 text-white">|</span>
+                <span style={{
+                  display: 'inline-block',
+                  width: '7px',
+                  height: '1em',
+                  background: 'var(--text-secondary)',
+                  marginLeft: '2px',
+                  verticalAlign: 'text-bottom',
+                  animation: 'cursor-blink 1s step-end infinite',
+                }} />
               )}
             </p>
           </div>

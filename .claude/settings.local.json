@@ -24,7 +24,8 @@
       "Bash(curl *)",
       "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('TIGERweb tracts OK:', d.features?.length, 'features'\\)\")",
       "Bash(node *)",
-      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(npx tsc *)"
     ]
   }
 }

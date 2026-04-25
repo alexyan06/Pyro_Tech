@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-04-25T00:00:00Z",
+  "title": "Design System: Ember",
+  "extensions": {
+    "colorMeta": {
+      "background":        { "role": "neutral",   "displayName": "Incident Black",     "canonical": "oklch(6% 0.008 24)",   "tonalRamp": ["oklch(6% 0.008 24)", "oklch(13% 0.009 24)", "oklch(21% 0.007 24)", "oklch(30% 0.008 24)", "oklch(40% 0.007 24)", "oklch(52% 0.006 24)", "oklch(65% 0.005 24)", "oklch(80% 0.005 24)"] },
+      "surface":           { "role": "neutral",   "displayName": "Panel Ash",          "canonical": "oklch(9% 0.009 24)",   "tonalRamp": ["oklch(6% 0.008 24)", "oklch(9% 0.009 24)", "oklch(13% 0.009 24)", "oklch(21% 0.007 24)", "oklch(32% 0.007 24)", "oklch(50% 0.006 24)", "oklch(68% 0.005 24)", "oklch(84% 0.005 24)"] },
+      "surface-raised":    { "role": "neutral",   "displayName": "Raised Console",     "canonical": "oklch(13% 0.009 24)",  "tonalRamp": ["oklch(6% 0.008 24)", "oklch(9% 0.009 24)", "oklch(13% 0.009 24)", "oklch(21% 0.007 24)", "oklch(32% 0.007 24)", "oklch(50% 0.006 24)", "oklch(68% 0.005 24)", "oklch(84% 0.005 24)"] },
+      "border-subtle":     { "role": "neutral",   "displayName": "Panel Seam (Subtle)", "canonical": "oklch(15% 0.007 24)", "tonalRamp": ["oklch(6% 0.008 24)", "oklch(10% 0.008 24)", "oklch(15% 0.007 24)", "oklch(22% 0.007 24)", "oklch(32% 0.006 24)", "oklch(45% 0.005 24)", "oklch(60% 0.005 24)", "oklch(80% 0.004 24)"] },
+      "border":            { "role": "neutral",   "displayName": "Panel Seam",         "canonical": "oklch(21% 0.007 24)",  "tonalRamp": ["oklch(6% 0.008 24)", "oklch(10% 0.008 24)", "oklch(15% 0.007 24)", "oklch(21% 0.007 24)", "oklch(32% 0.006 24)", "oklch(45% 0.005 24)", "oklch(62% 0.005 24)", "oklch(80% 0.004 24)"] },
+      "border-bright":     { "role": "neutral",   "displayName": "Panel Seam (Bright)", "canonical": "oklch(30% 0.008 24)", "tonalRamp": ["oklch(6% 0.008 24)", "oklch(12% 0.008 24)", "oklch(20% 0.007 24)", "oklch(30% 0.008 24)", "oklch(42% 0.007 24)", "oklch(55% 0.006 24)", "oklch(68% 0.005 24)", "oklch(84% 0.004 24)"] },
+      "text-primary":      { "role": "neutral",   "displayName": "CRT Warm White",     "canonical": "oklch(84% 0.005 24)",  "tonalRamp": ["oklch(15% 0.005 24)", "oklch(25% 0.005 24)", "oklch(35% 0.005 24)", "oklch(50% 0.005 24)", "oklch(62% 0.005 24)", "oklch(72% 0.005 24)", "oklch(84% 0.005 24)", "oklch(94% 0.003 24)"] },
+      "text-secondary":    { "role": "neutral",   "displayName": "Radio Grey",         "canonical": "oklch(50% 0.005 24)",  "tonalRamp": ["oklch(15% 0.005 24)", "oklch(25% 0.005 24)", "oklch(35% 0.005 24)", "oklch(50% 0.005 24)", "oklch(62% 0.005 24)", "oklch(72% 0.005 24)", "oklch(84% 0.005 24)", "oklch(94% 0.003 24)"] },
+      "text-muted":        { "role": "neutral",   "displayName": "Dead Air",           "canonical": "oklch(34% 0.005 24)",  "tonalRamp": ["oklch(15% 0.005 24)", "oklch(25% 0.005 24)", "oklch(34% 0.005 24)", "oklch(45% 0.005 24)", "oklch(58% 0.005 24)", "oklch(70% 0.005 24)", "oklch(82% 0.005 24)", "oklch(93% 0.003 24)"] },
+      "incident-amber":    { "role": "primary",   "displayName": "Incident Amber",     "canonical": "oklch(68% 0.18 45)",   "tonalRamp": ["oklch(15% 0.08 45)", "oklch(25% 0.12 45)", "oklch(35% 0.15 45)", "oklch(45% 0.17 45)", "oklch(55% 0.18 45)", "oklch(68% 0.18 45)", "oklch(78% 0.15 45)", "oklch(88% 0.10 45)"] },
+      "fire-red":          { "role": "secondary", "displayName": "Fire Red",           "canonical": "oklch(63% 0.22 27)",   "tonalRamp": ["oklch(15% 0.08 27)", "oklch(25% 0.12 27)", "oklch(35% 0.16 27)", "oklch(45% 0.19 27)", "oklch(55% 0.21 27)", "oklch(63% 0.22 27)", "oklch(73% 0.18 27)", "oklch(83% 0.12 27)"] },
+      "evacuation-blue":   { "role": "secondary", "displayName": "Evacuation Blue",    "canonical": "oklch(66% 0.17 237)",  "tonalRamp": ["oklch(15% 0.07 237)", "oklch(25% 0.10 237)", "oklch(35% 0.13 237)", "oklch(45% 0.15 237)", "oklch(55% 0.16 237)", "oklch(66% 0.17 237)", "oklch(75% 0.14 237)", "oklch(85% 0.09 237)"] },
+      "operational-green": { "role": "secondary", "displayName": "Operational Green",  "canonical": "oklch(68% 0.17 154)",  "tonalRamp": ["oklch(15% 0.07 154)", "oklch(25% 0.10 154)", "oklch(35% 0.13 154)", "oklch(45% 0.15 154)", "oklch(55% 0.16 154)", "oklch(68% 0.17 154)", "oklch(76% 0.14 154)", "oklch(86% 0.09 154)"] },
+      "clock-yellow":      { "role": "secondary", "displayName": "Clock Yellow",       "canonical": "oklch(72% 0.16 58)",   "tonalRamp": ["oklch(15% 0.06 58)", "oklch(25% 0.09 58)", "oklch(35% 0.12 58)", "oklch(48% 0.14 58)", "oklch(60% 0.15 58)", "oklch(72% 0.16 58)", "oklch(82% 0.13 58)", "oklch(90% 0.08 58)"] },
+      "command-purple":    { "role": "secondary", "displayName": "Command Purple",     "canonical": "oklch(66% 0.18 292)",  "tonalRamp": ["oklch(15% 0.07 292)", "oklch(25% 0.10 292)", "oklch(35% 0.13 292)", "oklch(45% 0.15 292)", "oklch(55% 0.17 292)", "oklch(66% 0.18 292)", "oklch(76% 0.14 292)", "oklch(86% 0.09 292)"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "EMBER logotype in the dashboard header. Used nowhere else in the UI." },
+      "title":    { "displayName": "Title",    "purpose": "Section panel headers and region labels. Uppercase, tracked wide." },
+      "body":     { "displayName": "Body",     "purpose": "Agent transmission prose. The only surface where running text appears." },
+      "label":    { "displayName": "Label",    "purpose": "MetricItem labels, callsign tags, button text, status strings. The workhorse." },
+      "mono":     { "displayName": "Mono",     "purpose": "MetricItem values, simulation clock, data readouts. Always tabular-nums." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "pulse-glow",    "value": "opacity 0.6 to 1, 2s ease-in-out infinite",         "purpose": "Live-state indicators: Simulation Active badge, streaming Transmitting label." },
+      { "name": "cursor-blink",  "value": "opacity 1/0, 1s step-end infinite",                 "purpose": "Text cursor in streaming agent transmission body." },
+      { "name": "clock-pulse",   "value": "opacity 1 to 0.6, 2s ease-in-out infinite",         "purpose": "Simulation clock readout in dashboard header." },
+      { "name": "state-change",  "value": "all 0.5s ease-out",                                  "purpose": "MetricItem value transitions when simulation data updates." },
+      { "name": "control-hover", "value": "background 0.15s, border-color 0.15s",              "purpose": "SimControl button hover feedback." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "SimControl Button (Default)",
+      "kind": "button",
+      "refersTo": "button-control",
+      "description": "Bare operational command button. Used for Pause, Resume, and navigation actions.",
+      "html": "<button class=\"ds-sim-control\">PAUSE</button>",
+      "css": ".ds-sim-control { height: 30px; border: 1px solid oklch(21% 0.007 24); border-radius: 2px; padding: 0 14px; background: transparent; color: oklch(50% 0.005 24); font-family: 'Barlow Condensed', system-ui, sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: background 0.15s, border-color 0.15s; } .ds-sim-control:hover { background: oklch(13% 0.009 24); } .ds-sim-control:focus-visible { outline: 1px solid oklch(30% 0.008 24); outline-offset: 2px; }"
+    },
+    {
+      "name": "SimControl Button (Danger)",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Stop action. Red text signals destructive or terminal command.",
+      "html": "<button class=\"ds-sim-control ds-sim-control--danger\">STOP</button>",
+      "css": ".ds-sim-control { height: 30px; border: 1px solid oklch(21% 0.007 24); border-radius: 2px; padding: 0 14px; background: transparent; font-family: 'Barlow Condensed', system-ui, sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: background 0.15s; } .ds-sim-control--danger { color: oklch(63% 0.22 27); } .ds-sim-control--danger:hover { background: oklch(13% 0.009 24); } .ds-sim-control--danger:focus-visible { outline: 1px solid oklch(63% 0.22 27); outline-offset: 2px; }"
+    },
+    {
+      "name": "SimControl Button (Command)",
+      "kind": "button",
+      "refersTo": "button-command",
+      "description": "Playbook / IAP action. Purple text signals incident command planning functions.",
+      "html": "<button class=\"ds-sim-control ds-sim-control--command\">PLAYBOOK</button>",
+      "css": ".ds-sim-control { height: 30px; border: 1px solid oklch(21% 0.007 24); border-radius: 2px; padding: 0 14px; background: transparent; font-family: 'Barlow Condensed', system-ui, sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: background 0.15s; } .ds-sim-control--command { color: oklch(66% 0.18 292); } .ds-sim-control--command:hover { background: oklch(13% 0.009 24); } .ds-sim-control--command:focus-visible { outline: 1px solid oklch(66% 0.18 292); outline-offset: 2px; }"
+    },
+    {
+      "name": "Metric Item",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Stacked data readout: mono value over condensed uppercase label. The atomic unit of the MetricsBar.",
+      "html": "<div class=\"ds-metric\"><span class=\"ds-metric__value\" style=\"color: oklch(63% 0.22 27)\">2,847</span><span class=\"ds-metric__label\">Acres Burned</span></div>",
+      "css": ".ds-metric { display: flex; flex-direction: column; align-items: flex-start; padding: 0 16px; gap: 2px; flex-shrink: 0; } .ds-metric__value { font-family: 'Geist Mono', 'Courier New', monospace; font-size: 0.88rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; transition: all 0.5s ease-out; } .ds-metric__label { font-family: 'Barlow Condensed', system-ui, sans-serif; font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(34% 0.005 24); white-space: nowrap; }"
+    },
+    {
+      "name": "Agent Callsign Row",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Radio callsign header for each agent transmission. Color identifies the agent's incident function.",
+      "html": "<div class=\"ds-callsign\"><span class=\"ds-callsign__name\" style=\"color: oklch(63% 0.22 27)\">DISASTER MGT</span><div class=\"ds-callsign__rule\" style=\"background: oklch(63% 0.22 27)\"></div><span class=\"ds-callsign__streaming\">Transmitting</span></div>",
+      "css": ".ds-callsign { display: flex; align-items: center; gap: 8px; margin-bottom: 0.45rem; } .ds-callsign__name { font-family: 'Barlow Condensed', system-ui, sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; flex-shrink: 0; } .ds-callsign__rule { flex: 1; height: 1px; opacity: 0.15; } .ds-callsign__streaming { font-family: 'Barlow Condensed', system-ui, sans-serif; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(34% 0.005 24); flex-shrink: 0; animation: ds-pulse-glow 1.5s ease-in-out infinite; } @keyframes ds-pulse-glow { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }"
+    },
+    {
+      "name": "Section Panel Header",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Titled region header. Labels a functional panel area — agent feed, metrics, etc.",
+      "html": "<div class=\"ds-panel-header\"><h2 class=\"ds-panel-header__title\">Agent Transmissions</h2></div>",
+      "css": ".ds-panel-header { border-bottom: 1px solid oklch(21% 0.007 24); background: oklch(9% 0.009 24); padding: 0.5rem 1rem; } .ds-panel-header__title { font-family: 'Barlow Condensed', system-ui, sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: oklch(34% 0.005 24); margin: 0; }"
+    },
+    {
+      "name": "Status Indicator",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Connection or system state dot with condensed label.",
+      "html": "<div class=\"ds-status\"><span class=\"ds-status__dot ds-status__dot--connected\"></span><span class=\"ds-status__label\">Connected</span></div>",
+      "css": ".ds-status { display: flex; align-items: center; gap: 6px; } .ds-status__dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; } .ds-status__dot--connected { background: oklch(68% 0.17 154); } .ds-status__dot--disconnected { background: oklch(63% 0.22 27); } .ds-status__label { font-family: 'Barlow Condensed', system-ui, sans-serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(34% 0.005 24); }"
+    },
+    {
+      "name": "Simulation Active Badge",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Absolute-positioned map overlay badge signaling active simulation. No radius. Pulsing.",
+      "html": "<div class=\"ds-sim-badge\">Simulation Active</div>",
+      "css": ".ds-sim-badge { background: oklch(63% 0.22 27); color: oklch(96% 0.003 24); font-family: 'Barlow Condensed', system-ui, sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; padding: 4px 10px; border-radius: 0; animation: ds-pulse-glow 2s ease-in-out infinite; } @keyframes ds-pulse-glow { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Operations Room",
+    "overview": "The EOC at 02:00. A wildfire on radar. Seven radio channels transmitting simultaneously. The map is the source of truth. Every element in this UI is a readout — not decoration, not branding. The interface exists to serve the simulation; the simulation exists to be taken seriously.\n\nThis system commits to near-complete chromatic suppression. Surfaces are deep near-black, tinted warmly toward fire hue. Text is a narrow off-white. The semantic vocabulary — six status accents, each assigned to an incident function — is the only color that moves. The brand amber (Incident Amber) appears in precisely two places: the logotype and the 2px top stripe on the header. Its rarity is its authority.\n\nBarlow Condensed does all the labeling: section headers, callsigns, metrics labels, button text — compressed, uppercase, tracked wide, operating at 0.56–0.72rem. Barlow body appears only where prose is permitted: the agent transmission feed. Geist Mono holds all numeric data. This three-role type hierarchy is strict.\n\nThis system rejects: strategy game UI chrome, generic BI dashboard layouts (Grafana, Tableau), conversational AI chat windows, consumer weather app color gradients. If a professional incident commander sat at this screen at 2am, the interface should read as infrastructure, not a demonstration.",
+    "keyCharacteristics": [
+      "Near-zero radius (2px universally). Angular geometry signals industrial precision.",
+      "Semantic color, not decorative color. Red means fire. Blue means evacuation movement. Yellow means simulation time. These colors do not appear outside their assigned function.",
+      "Condensed type at micro scale. All UI labeling is compressed, uppercase, tracked — maximum density without legibility compromise.",
+      "Flat tonal depth. Three surface levels; zero shadows. Separation by tone and 1px borders.",
+      "Amber as the single brand signal. Incident Amber appears in the logotype and the header accent stripe. Nowhere else as decoration."
+    ],
+    "rules": [
+      { "name": "The One Signal Rule",         "body": "Each status color maps to exactly one incident function. Fire Red is never used for a non-fire element. Operational Green is never used as a UI positive-state affordance outside the connected indicator. The semantic assignments are the system; they cannot be borrowed for decorative or emphasis purposes.", "section": "colors" },
+      { "name": "The Amber Authority Rule",    "body": "Incident Amber appears in the logotype and the 2px header top border. These are its two permitted structural uses. When it reappears as --accent-orange in status metrics, it reads as a congestion or route-closure signal. Never use it as a general highlight or hover color.", "section": "colors" },
+      { "name": "The Condensed Lockdown Rule", "body": "Barlow Condensed is used for every UI element that navigates, labels, categorizes, or controls. It does not appear in agent transmission body copy. Barlow body does not appear in UI chrome. These roles do not cross.", "section": "typography" },
+      { "name": "The Micro Label Rule",        "body": "UI labels operate at 0.56–0.72rem with letter-spacing of 0.1em or more. At this scale, condensed letterforms with wide tracking are more legible than proportional type at the same size. Do not increase label font size to compensate for tracking — the compressed density is the aesthetic.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule",    "body": "If you are reaching for box-shadow, backdrop-filter, or filter: blur, stop. Redesign the element using tonal surfaces and borders. Shadows are prohibited. Glassmorphism is prohibited. The EOC aesthetic is matte, not luminous.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use semantic accent colors for their assigned incident function only.",
+      "Do use Barlow Condensed for all UI labeling, section titles, button text, callsigns, and chip labels. Uppercase, tracked wide.",
+      "Do use Geist Mono for all numeric data readouts with font-variant-numeric: tabular-nums.",
+      "Do use Barlow body (0.84rem, lh 1.65) exclusively for agent transmission prose.",
+      "Do use 2px border-radius on every interactive element.",
+      "Do signal state changes with color and opacity. The pulse-glow animation (opacity only, ease-in-out) is permitted for live-state indicators.",
+      "Do use the three-layer tonal surface stack and 1px border separations to express depth. No shadows.",
+      "Do use inline styles when precision matters. Tailwind utilities introduce rounding errors at micro-type scales."
+    ],
+    "donts": [
+      "Don't make this look like a strategy game or disaster sim game. No health bars, score counters, or game-UI chrome.",
+      "Don't make this look like a generic BI dashboard (Grafana, Tableau, Metabase).",
+      "Don't make the agent feed look like a messaging app or chat window.",
+      "Don't use consumer weather app aesthetics: no over-saturated red banners, no breaking-news urgency styling.",
+      "Don't add box-shadow, backdrop-filter, or filter: blur to any element.",
+      "Don't use Incident Amber as a hover color, highlight, or emphasis tool outside its two structural roles.",
+      "Don't use border-left greater than 1px as a colored accent stripe on any panel, card, or list item.",
+      "Don't use gradient text (background-clip: text with a gradient). All text is a single solid color.",
+      "Don't use glassmorphism or semi-transparent blur panels decoratively.",
+      "Don't show the Mapbox attribution logo — suppress mapboxgl-ctrl-logo and mapboxgl-ctrl-attrib.",
+      "Don't add font sizes larger than 1.2rem to UI chrome. The headline scale is reserved for the EMBER logotype alone."
+    ]
+  }
+}

@@ -1,29 +1,53 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #e0e0e0;
-  --panel-bg: #111111;
-  --border: #222222;
-  --accent-red: #ff4444;
-  --accent-blue: #4488ff;
-  --accent-green: #44cc66;
-  --accent-yellow: #ffcc00;
-  --accent-purple: #aa66ff;
-  --accent-orange: #ff8844;
+  /* Surfaces */
+  --background: oklch(6% 0.008 24);
+  --surface: oklch(9% 0.009 24);
+  --surface-raised: oklch(13% 0.009 24);
+  --border-subtle: oklch(15% 0.007 24);
+  --border: oklch(21% 0.007 24);
+  --border-bright: oklch(30% 0.008 24);
+
+  /* Text */
+  --text-primary: oklch(84% 0.005 24);
+  --text-secondary: oklch(50% 0.005 24);
+  --text-muted: oklch(34% 0.005 24);
+
+  /* Legacy aliases — referenced throughout dashboard components */
+  --foreground: var(--text-primary);
+  --panel-bg: var(--surface);
+
+  /* Semantic status colors */
+  --accent-red: oklch(63% 0.22 27);
+  --accent-blue: oklch(66% 0.17 237);
+  --accent-green: oklch(68% 0.17 154);
+  --accent-yellow: oklch(72% 0.16 58);
+  --accent-purple: oklch(66% 0.18 292);
+  --accent-orange: oklch(68% 0.18 45);
+
+  /* Brand accent — ember amber */
+  --accent: oklch(68% 0.18 45);
+
+  /* Typography */
+  --font-body: var(--font-barlow), system-ui, sans-serif;
+  --font-condensed: var(--font-barlow-condensed), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), "Courier New", monospace;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-barlow);
   --font-mono: var(--font-geist-mono);
 }
 
+*, *::before, *::after { box-sizing: border-box; }
+
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, sans-serif;
+  color: var(--text-primary);
+  font-family: var(--font-body);
 }
 
 .mapboxgl-ctrl-logo,
@@ -31,47 +55,41 @@ body {
   display: none !important;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--panel-bg);
-}
-::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 3px;
-}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: oklch(24% 0.006 24); border-radius: 2px; }
 
-/* Sim clock pulse animation */
+/* Sim clock */
 @keyframes clock-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  50% { opacity: 0.6; }
 }
-
 .sim-clock {
-  font-family: 'Courier New', monospace;
-  font-size: 0.85rem;
-  letter-spacing: 0.05em;
-  color: #f97316; /* orange-500 */
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  color: var(--accent-yellow);
   animation: clock-pulse 2s ease-in-out infinite;
 }
-
 .sim-clock-label {
-  font-size: 0.65rem;
-  letter-spacing: 0.15em;
-  color: #6b7280; /* gray-500 */
+  font-family: var(--font-condensed);
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
+/* Pulse glow — used by SIMULATION ACTIVE badge and streaming cursor */
 @keyframes pulse-glow {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Cursor blink for streaming agent text */
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
 }

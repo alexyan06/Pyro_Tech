@@ -7,7 +7,7 @@ const API_BASE = process.env.NEXT_PUBLIC_WS_URL?.replace(/^ws/, 'http') ?? 'http
 
 const PRESETS = [
   {
-    label: 'Los Angeles — Palisades Fire',
+    label: 'Palisades Fire — Jan 2025',
     city: 'Pacific Palisades, Los Angeles, CA',
     datetime: '2025-01-07T08:00',
     lat: '34.0531',
@@ -19,6 +19,16 @@ const PRESETS = [
   },
 ] as const;
 
+const SYSTEMS = [
+  { label: 'Fire Behavior Analysis',    color: '#e05555' },
+  { label: 'Evacuation Coordination',   color: '#5588ee' },
+  { label: 'Resource Deployment',       color: '#44bb66' },
+  { label: 'Infrastructure Monitoring', color: '#ddbb44' },
+  { label: 'Public Communications',     color: '#dd8844' },
+  { label: 'Traffic Management',        color: '#ee8822' },
+  { label: 'Incident Command (IAP)',     color: '#9966ee' },
+];
+
 interface FormState {
   city: string;
   datetime: string;
@@ -28,6 +38,11 @@ interface FormState {
   windSpeed: string;
   windDirection: string;
   durationHours: string;
+}
+
+function bearingToCardinal(deg: number): string {
+  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  return dirs[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
 }
 
 export default function SetupPage() {
@@ -70,7 +85,7 @@ export default function SetupPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!form.city.trim()) { setError('Please enter a city or zip code.'); return; }
+    if (!form.city.trim()) { setError('Location required.'); return; }
     setLoading(true);
     try {
       const windSpeed = Number.parseFloat(form.windSpeed);
@@ -92,10 +107,8 @@ export default function SetupPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Setup failed');
 
-      // PRE-FETCH: Start loading the map data immediately while the user is redirecting.
-      // This will be stored as a Promise in the window object to be ready for the dashboard.
       (window as unknown as Record<string, unknown>).__EMBER_GEOJSON_PROMISE__ = fetch(`${API_BASE}/api/geojson-bundle`, { cache: 'no-store' })
-        .then(res => res.ok ? res.json() : null)
+        .then(r => r.ok ? r.json() : null)
         .catch(() => null);
 
       sessionStorage.setItem('ember_scenario', JSON.stringify(data));
@@ -108,191 +121,585 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="setup-root">
-      <div className="setup-grid" />
-      <div className="particles">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="particle" style={{ '--i': i } as React.CSSProperties} />
+    <div className="sp-root">
+      <div className="sp-scan" aria-hidden="true" />
+      <div className="sp-particles" aria-hidden="true">
+        {Array.from({ length: 16 }).map((_, i) => (
+          <div key={i} className="sp-particle" style={{ '--i': i } as React.CSSProperties} />
         ))}
       </div>
 
-      <main className="setup-main">
-        <div className="setup-hero">
-          <div className="ember-badge"><span className="ember-badge-dot" />WILDFIRE SIMULATION PLATFORM</div>
-          <h1 className="setup-title"><span className="title-ember">EMBER</span></h1>
-          <p className="setup-subtitle">
-            Configure your simulation scenario. Select a US location, set fire parameters,
-            and deploy our multi-agent AI to model disaster response in real time.
+      <main className="sp-main">
+        {/* Left: Identity */}
+        <div className="sp-left">
+          <div className="sp-ics-tag">ICS-EMBER-1 · Training Scenario</div>
+          <h1 className="sp-title">EMBER</h1>
+          <p className="sp-desc">
+            Multi-agent AI incident command simulation. Configure a U.S. wildfire scenario
+            and deploy seven specialized AI systems to model coordinated disaster response
+            in real time.
+          </p>
+          <div className="sp-sys-label">Command Systems</div>
+          <ul className="sp-systems" aria-label="Active command systems">
+            {SYSTEMS.map(({ label, color }) => (
+              <li key={label} className="sp-system">
+                <span className="sp-sys-dot" style={{ background: color }} aria-hidden="true" />
+                {label}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Right: Configuration */}
+        <div className="sp-right">
+          <div className="sp-panel">
+            <form onSubmit={handleSubmit} className="sp-form" noValidate>
+
+              <div className="sp-field">
+                <span className="sp-fl">Scenario Presets</span>
+                <div className="sp-presets">
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => applyPreset(p.label)}
+                      className={`sp-chip ${preset === p.label ? 'sp-chip--on' : ''}`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <hr className="sp-rule" />
+
+              <div className="sp-field">
+                <label className="sp-fl" htmlFor="city">Location</label>
+                <input
+                  id="city"
+                  type="text"
+                  className="sp-input"
+                  placeholder="City, county, or ZIP — U.S. only"
+                  value={form.city}
+                  onChange={(e) => update('city', e.target.value)}
+                  required
+                />
+                <span className="sp-hint">Infrastructure fetched via OpenStreetMap</span>
+              </div>
+
+              <div className="sp-field">
+                <label className="sp-fl" htmlFor="datetime">Simulation Start</label>
+                <input
+                  id="datetime"
+                  type="datetime-local"
+                  className="sp-input"
+                  value={form.datetime}
+                  onChange={(e) => update('datetime', e.target.value)}
+                />
+              </div>
+
+              <div className="sp-field">
+                <span className="sp-fl">
+                  Fire Origin <span className="sp-fl-opt">optional</span>
+                </span>
+                <div className="sp-coord-row">
+                  <div className="sp-coord">
+                    <label className="sp-sublabel" htmlFor="lat">Latitude</label>
+                    <input
+                      id="lat"
+                      type="number"
+                      step="any"
+                      className="sp-input"
+                      placeholder="34.0531"
+                      value={form.lat}
+                      onChange={(e) => update('lat', e.target.value)}
+                    />
+                  </div>
+                  <div className="sp-coord">
+                    <label className="sp-sublabel" htmlFor="lng">Longitude</label>
+                    <input
+                      id="lng"
+                      type="number"
+                      step="any"
+                      className="sp-input"
+                      placeholder="-118.5260"
+                      value={form.lng}
+                      onChange={(e) => update('lng', e.target.value)}
+                    />
+                  </div>
+                </div>
+                <span className="sp-hint">Defaults to city center if omitted</span>
+              </div>
+
+              <div className="sp-field">
+                <div className="sp-slider-header">
+                  <label className="sp-fl" htmlFor="acres">Initial Fire Size</label>
+                  <span className="sp-readout">{form.acres} ac</span>
+                </div>
+                <input
+                  id="acres"
+                  type="range"
+                  min="1" max="500" step="1"
+                  className="sp-slider sp-slider--fire"
+                  value={form.acres}
+                  onChange={(e) => update('acres', e.target.value)}
+                />
+                <div className="sp-scale"><span>1 ac</span><span>250 ac</span><span>500 ac</span></div>
+              </div>
+
+              <div className="sp-field">
+                <div className="sp-slider-header">
+                  <label className="sp-fl" htmlFor="windSpeed">Wind Speed</label>
+                  <span className="sp-readout">{form.windSpeed} mph</span>
+                </div>
+                <input
+                  id="windSpeed"
+                  type="range"
+                  min="0" max="80" step="1"
+                  className="sp-slider sp-slider--wind"
+                  value={form.windSpeed}
+                  onChange={(e) => update('windSpeed', e.target.value)}
+                />
+                <div className="sp-scale"><span>Calm</span><span>40 mph</span><span>80 mph</span></div>
+              </div>
+
+              <div className="sp-field">
+                <div className="sp-slider-header">
+                  <label className="sp-fl" htmlFor="windDir">Wind Direction</label>
+                  <div className="sp-bearing">
+                    <input
+                      type="number"
+                      min="0" max="359" step="1"
+                      className="sp-bearing-input"
+                      value={form.windDirection}
+                      onChange={(e) => update('windDirection', e.target.value)}
+                    />
+                    <span className="sp-bearing-unit">°</span>
+                    <span className="sp-cardinal">{bearingToCardinal(Number(form.windDirection))}</span>
+                  </div>
+                </div>
+                <input
+                  id="windDir"
+                  type="range"
+                  min="0" max="359" step="1"
+                  className="sp-slider sp-slider--bearing"
+                  value={form.windDirection}
+                  onChange={(e) => update('windDirection', e.target.value)}
+                />
+                <span className="sp-hint">0° = N · 90° = E · 180° = S · 270° = W</span>
+              </div>
+
+              <div className="sp-field">
+                <span className="sp-fl">Duration</span>
+                <div className="sp-duration">
+                  {(['1', '3', '6', '12'] as const).map((h) => (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => update('durationHours', h)}
+                      className={`sp-dur ${form.durationHours === h ? 'sp-dur--on' : ''}`}
+                    >
+                      {h}h
+                    </button>
+                  ))}
+                </div>
+                <span className="sp-hint">~30 seconds of real time per simulated hour</span>
+              </div>
+
+              {error && (
+                <div className="sp-error" role="alert">
+                  <span className="sp-error-mark" aria-hidden="true">!</span>
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="sp-launch"
+                disabled={loading}
+                id="launch-simulation-btn"
+              >
+                {loading ? (
+                  <><span className="sp-spinner" aria-hidden="true" /> Fetching infrastructure data</>
+                ) : (
+                  <><span aria-hidden="true">▶</span> Launch Simulation</>
+                )}
+              </button>
+            </form>
+          </div>
+
+          <p className="sp-footer">
+            OpenStreetMap · Nominatim · NASA FIRMS · ElevenLabs
           </p>
         </div>
-
-        <div className="setup-card">
-          <form onSubmit={handleSubmit} className="setup-form" noValidate>
-
-            <div className="form-section">
-              <label className="form-label">Quick Presets</label>
-              <div className="preset-row">
-                {PRESETS.map((p) => (
-                  <button key={p.label} type="button"
-                    onClick={() => applyPreset(p.label)}
-                    className={`preset-chip ${preset === p.label ? 'preset-chip--active' : ''}`}>
-                    🔥 {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="form-divider" />
-
-            <div className="form-section">
-              <label className="form-label" htmlFor="city">📍 City or Zip Code</label>
-              <input id="city" type="text" className="form-input"
-                placeholder="e.g. Pacific Palisades, CA or 90272"
-                value={form.city} onChange={(e) => update('city', e.target.value)} required />
-              <span className="form-hint">Used to fetch infrastructure data via OpenStreetMap</span>
-            </div>
-
-            <div className="form-section">
-              <label className="form-label" htmlFor="datetime">🕐 Simulation Start Date &amp; Time</label>
-              <input id="datetime" type="datetime-local" className="form-input"
-                value={form.datetime} onChange={(e) => update('datetime', e.target.value)} />
-            </div>
-
-            <div className="form-section">
-              <label className="form-label">🔥 Fire Origin (optional)</label>
-              <div className="coord-row">
-                <div className="coord-field">
-                  <label className="coord-label" htmlFor="lat">Latitude</label>
-                  <input id="lat" type="number" step="any" className="form-input"
-                    placeholder="e.g. 34.0531" value={form.lat} onChange={(e) => update('lat', e.target.value)} />
-                </div>
-                <div className="coord-field">
-                  <label className="coord-label" htmlFor="lng">Longitude</label>
-                  <input id="lng" type="number" step="any" className="form-input"
-                    placeholder="e.g. -118.5260" value={form.lng} onChange={(e) => update('lng', e.target.value)} />
-                </div>
-              </div>
-              <span className="form-hint">Leave blank to use the center of the selected city</span>
-            </div>
-
-            <div className="form-section">
-              <label className="form-label" htmlFor="acres">📐 Initial Fire Size (Acres)</label>
-              <div className="acres-row">
-                <input id="acres" type="range" min="1" max="500" step="1" className="acres-slider"
-                  value={form.acres} onChange={(e) => update('acres', e.target.value)} />
-                <span className="acres-value">{form.acres} ac</span>
-              </div>
-            </div>
-
-            <div className="form-section">
-              <label className="form-label" htmlFor="windSpeed">💨 Wind Speed</label>
-              <div className="acres-row">
-                <input id="windSpeed" type="range" min="0" max="80" step="1" className="wind-slider"
-                  value={form.windSpeed} onChange={(e) => update('windSpeed', e.target.value)} />
-                <span className="acres-value">{form.windSpeed} mph</span>
-              </div>
-              <span className="form-hint">Higher wind stretches the fire head and increases spot fire risk.</span>
-            </div>
-
-            <div className="form-section">
-              <label className="form-label" htmlFor="windDirection">🧭 Wind Direction</label>
-              <div className="wind-degree-row">
-                <input id="windDirection" type="range" min="0" max="359" step="1" className="wind-slider"
-                  value={form.windDirection} onChange={(e) => update('windDirection', e.target.value)} />
-                <input type="number" min="0" max="359" step="1" className="wind-degree-input"
-                  value={form.windDirection} onChange={(e) => update('windDirection', e.target.value)} />
-                <span className="wind-degree-unit">°</span>
-              </div>
-              <span className="form-hint">Direction the wind is pushing the fire toward, in degrees: 0=N, 90=E, 180=S, 270=W.</span>
-            </div>
-
-            <div className="form-section">
-              <label className="form-label">⏱ Simulation Duration</label>
-              <div className="duration-row">
-                {['1', '3', '6', '12'].map((hours) => (
-                  <button
-                    key={hours}
-                    type="button"
-                    onClick={() => update('durationHours', hours)}
-                    className={`duration-option ${form.durationHours === hours ? 'duration-option--active' : ''}`}
-                  >
-                    {hours} hr
-                  </button>
-                ))}
-              </div>
-              <span className="form-hint">Each simulated hour runs in about 30 seconds.</span>
-            </div>
-
-            {error && <div className="form-error" role="alert">⚠ {error}</div>}
-
-            <button type="submit" className="submit-btn" disabled={loading} id="launch-simulation-btn">
-              {loading
-                ? <><span className="spinner" />Fetching infrastructure data...</>
-                : <><span className="btn-icon">▶</span>Launch Simulation</>}
-            </button>
-          </form>
-        </div>
-
-        <p className="setup-footer">
-          Powered by OpenStreetMap · Nominatim · NASA FIRMS · ElevenLabs AI Voices
-        </p>
       </main>
 
       <style>{`
-        .setup-root{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--background);position:relative;overflow:hidden;padding:2rem 1rem;}
-        .setup-grid{position:absolute;inset:0;background-image:radial-gradient(circle,#ffffff0a 1px,transparent 1px);background-size:32px 32px;pointer-events:none;}
-        .particles{position:absolute;inset:0;pointer-events:none;}
-        .particle{position:absolute;bottom:-20px;left:calc(var(--i)*5.2%);width:4px;height:4px;border-radius:50%;background:#ff4444;box-shadow:0 0 8px #ff4444,0 0 16px #ff8844;animation:rise calc(4s + var(--i)*0.3s) ease-in infinite;animation-delay:calc(var(--i)*0.4s);opacity:0;}
-        @keyframes rise{0%{transform:translateY(0) scale(1);opacity:.9;}80%{transform:translateY(-80vh) scale(.4);opacity:.3;}100%{transform:translateY(-95vh) scale(0);opacity:0;}}
-        .setup-main{position:relative;z-index:10;width:100%;max-width:580px;display:flex;flex-direction:column;align-items:center;gap:2rem;}
-        .setup-hero{text-align:center;}
-        .ember-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid #ff444440;background:#ff44440d;color:#ff6666;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;padding:4px 12px;border-radius:999px;margin-bottom:1.2rem;}
-        .ember-badge-dot{width:6px;height:6px;border-radius:50%;background:#ff4444;box-shadow:0 0 6px #ff4444;animation:blink 1.5s ease-in-out infinite;}
-        @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
-        .setup-title{font-size:clamp(3rem,10vw,5.5rem);font-weight:900;letter-spacing:.08em;margin:0 0 .6rem;line-height:1;}
-        .title-ember{background:linear-gradient(135deg,#ff4444 0%,#ff8844 50%,#ffcc00 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 30px #ff444480);}
-        .setup-subtitle{color:#9ca3af;font-size:.9rem;line-height:1.6;max-width:440px;margin:0 auto;}
-        .setup-card{width:100%;background:#111111ee;border:1px solid #2a2a2a;border-radius:16px;padding:2rem;backdrop-filter:blur(12px);box-shadow:0 0 0 1px #ff444410,0 24px 60px #00000080,inset 0 1px 0 #ffffff08;}
-        .setup-form{display:flex;flex-direction:column;gap:1.4rem;}
-        .form-section{display:flex;flex-direction:column;gap:6px;}
-        .form-divider{border:none;border-top:1px solid #222;margin:.2rem 0;}
-        .form-label{font-size:.75rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;}
-        .form-input{background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;color:#e0e0e0;font-size:.9rem;padding:10px 14px;outline:none;transition:border-color .2s,box-shadow .2s;color-scheme:dark;width:100%;box-sizing:border-box;}
-        .form-input:focus{border-color:#ff4444;box-shadow:0 0 0 3px #ff444420;}
-        .form-input::placeholder{color:#4b5563;}
-        .form-hint{font-size:.7rem;color:#4b5563;font-style:italic;}
-        .preset-row{display:flex;flex-wrap:wrap;gap:8px;}
-        .preset-chip{border:1px solid #2a2a2a;background:transparent;color:#9ca3af;font-size:.75rem;padding:6px 12px;border-radius:8px;cursor:pointer;transition:all .2s;}
-        .preset-chip:hover{border-color:#ff444480;color:#ff6666;background:#ff44440d;}
-        .preset-chip--active{border-color:#ff4444;color:#ff4444;background:#ff44441a;}
-        .coord-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-        .coord-field{display:flex;flex-direction:column;gap:4px;}
-        .coord-label{font-size:.7rem;color:#6b7280;}
-        .acres-row{display:flex;align-items:center;gap:14px;}
-        .acres-slider{flex:1;-webkit-appearance:none;height:4px;border-radius:4px;background:linear-gradient(to right,#ff4444 0%,#ff8844 50%,#ffcc00 100%);outline:none;cursor:pointer;}
-        .acres-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#ff4444;box-shadow:0 0 8px #ff4444;cursor:pointer;transition:transform .1s;}
-        .acres-slider::-webkit-slider-thumb:hover{transform:scale(1.2);}
-        .acres-value{min-width:56px;text-align:right;font-family:'Courier New',monospace;font-size:.85rem;color:#ff8844;font-weight:600;}
-        .wind-slider{flex:1;-webkit-appearance:none;height:4px;border-radius:4px;background:linear-gradient(to right,#38bdf8 0%,#facc15 55%,#ff4444 100%);outline:none;cursor:pointer;}
-        .wind-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#38bdf8;box-shadow:0 0 8px #38bdf8;cursor:pointer;transition:transform .1s;}
-        .wind-slider::-webkit-slider-thumb:hover{transform:scale(1.2);}
-        .wind-degree-row{display:grid;grid-template-columns:1fr 72px 16px;align-items:center;gap:8px;}
-        .wind-degree-input{background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;color:#e0f2fe;font-family:'Courier New',monospace;font-size:.85rem;font-weight:700;padding:8px 10px;outline:none;text-align:right;width:100%;box-sizing:border-box;}
-        .wind-degree-input:focus{border-color:#38bdf8;box-shadow:0 0 0 3px #38bdf820;}
-        .wind-degree-unit{color:#7dd3fc;font-family:'Courier New',monospace;font-size:.9rem;font-weight:700;}
-        .duration-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-        .duration-option{border:1px solid #2a2a2a;background:#0a0a0a;color:#9ca3af;font-size:.8rem;font-weight:600;padding:8px 10px;border-radius:8px;cursor:pointer;transition:all .2s;}
-        .duration-option:hover{border-color:#ff884480;color:#ff8844;background:#ff88440d;}
-        .duration-option--active{border-color:#ff8844;color:#ffcc00;background:#ff88441a;box-shadow:0 0 12px #ff884420;}
-        .form-error{background:#ff444415;border:1px solid #ff444440;border-radius:8px;color:#ff6666;font-size:.8rem;padding:10px 14px;}
-        .submit-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#ff4444,#ff6622);color:white;font-size:.9rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:none;border-radius:10px;padding:14px 24px;cursor:pointer;transition:all .2s;box-shadow:0 4px 24px #ff444440;margin-top:.4rem;}
-        .submit-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 32px #ff444460;}
-        .submit-btn:active:not(:disabled){transform:translateY(0);}
-        .submit-btn:disabled{opacity:.5;cursor:not-allowed;}
-        .btn-icon{font-size:.75rem;}
-        .spinner{width:16px;height:16px;border:2px solid #ffffff40;border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;}
-        @keyframes spin{to{transform:rotate(360deg);}}
-        .setup-footer{font-size:.65rem;color:#374151;letter-spacing:.05em;text-align:center;}
+        .sp-root {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--background);
+          position: relative;
+          overflow: hidden;
+          padding: 3rem 1.5rem;
+        }
+
+        .sp-scan {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: repeating-linear-gradient(
+            0deg,
+            transparent 0,
+            transparent 3px,
+            oklch(100% 0 0 / 0.007) 3px,
+            oklch(100% 0 0 / 0.007) 4px
+          );
+        }
+
+        .sp-particles { position: absolute; inset: 0; pointer-events: none; }
+        .sp-particle {
+          position: absolute;
+          bottom: -20px;
+          left: calc(var(--i) * 6.5%);
+          width: 3px;
+          height: 3px;
+          border-radius: 50%;
+          background: var(--accent);
+          box-shadow: 0 0 6px var(--accent);
+          animation: sp-rise calc(5s + var(--i) * 0.35s) ease-in infinite;
+          animation-delay: calc(var(--i) * 0.45s);
+          opacity: 0;
+        }
+        @keyframes sp-rise {
+          0%   { transform: translateY(0) scale(1);       opacity: 0.65; }
+          80%  { transform: translateY(-80vh) scale(0.3); opacity: 0.12; }
+          100% { transform: translateY(-96vh) scale(0);   opacity: 0; }
+        }
+
+        .sp-main {
+          position: relative;
+          z-index: 10;
+          width: 100%;
+          max-width: 1100px;
+          display: grid;
+          grid-template-columns: 1fr 500px;
+          gap: 5rem;
+          align-items: start;
+        }
+
+        /* LEFT */
+        .sp-left { padding-top: 0.5rem; }
+
+        .sp-ics-tag {
+          font-family: var(--font-condensed);
+          font-size: 0.62rem;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: var(--text-muted);
+          margin-bottom: 1.5rem;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .sp-ics-tag::before {
+          content: '';
+          display: block;
+          width: 18px;
+          height: 1px;
+          background: var(--text-muted);
+          flex-shrink: 0;
+        }
+
+        .sp-title {
+          font-family: var(--font-condensed);
+          font-size: clamp(4.5rem, 10vw, 7.5rem);
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          line-height: 0.88;
+          margin: 0 0 1.1rem;
+          color: var(--accent);
+          text-shadow: 0 0 80px oklch(68% 0.18 45 / 0.22);
+        }
+
+        .sp-desc {
+          font-size: 0.875rem;
+          line-height: 1.65;
+          color: var(--text-secondary);
+          max-width: 340px;
+          margin-bottom: 2.5rem;
+        }
+
+        .sp-sys-label {
+          font-family: var(--font-condensed);
+          font-size: 0.6rem;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: var(--text-muted);
+          margin-bottom: 0.8rem;
+        }
+
+        .sp-systems {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 7px;
+        }
+
+        .sp-system {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          font-family: var(--font-condensed);
+          font-size: 0.72rem;
+          font-weight: 600;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: var(--text-secondary);
+        }
+
+        .sp-sys-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          flex-shrink: 0;
+          opacity: 0.85;
+        }
+
+        /* RIGHT */
+        .sp-right { display: flex; flex-direction: column; gap: 0.6rem; }
+
+        .sp-panel {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          padding: 2.25rem;
+        }
+
+        .sp-form { display: flex; flex-direction: column; gap: 1.5rem; }
+        .sp-field { display: flex; flex-direction: column; gap: 7px; }
+        .sp-rule { border: none; border-top: 1px solid var(--border-subtle); margin: 0.25rem 0; }
+
+        .sp-fl {
+          font-family: var(--font-condensed);
+          font-size: 0.76rem;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: oklch(70% 0.006 24);
+        }
+        .sp-fl-opt {
+          font-weight: 400;
+          font-size: 0.64rem;
+          color: var(--text-muted);
+          letter-spacing: 0.08em;
+          text-transform: lowercase;
+          margin-left: 5px;
+        }
+        .sp-sublabel { font-size: 0.66rem; letter-spacing: 0.06em; color: var(--text-secondary); }
+        .sp-hint { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+
+        .sp-input {
+          background: var(--background);
+          border: 1px solid var(--border);
+          color: var(--text-primary);
+          font-family: var(--font-body);
+          font-size: 0.9375rem;
+          padding: 12px 14px;
+          outline: none;
+          transition: border-color 0.15s, box-shadow 0.15s;
+          color-scheme: dark;
+          width: 100%;
+          box-sizing: border-box;
+          border-radius: 2px;
+        }
+        .sp-input:focus {
+          border-color: var(--accent);
+          box-shadow: 0 0 0 2px oklch(68% 0.18 45 / 0.2);
+        }
+        .sp-input::placeholder { color: var(--text-muted); }
+
+        .sp-coord-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .sp-coord { display: flex; flex-direction: column; gap: 4px; }
+
+        .sp-slider-header { display: flex; align-items: baseline; justify-content: space-between; }
+        .sp-readout {
+          font-family: var(--font-mono);
+          font-size: 0.8rem;
+          color: var(--accent);
+          font-weight: 600;
+          letter-spacing: 0.04em;
+        }
+
+        .sp-slider {
+          width: 100%;
+          -webkit-appearance: none;
+          height: 4px;
+          border-radius: 2px;
+          outline: none;
+          cursor: pointer;
+          margin: 9px 0 3px;
+        }
+        .sp-slider--fire    { background: var(--accent); }
+        .sp-slider--wind    { background: var(--accent-blue); }
+        .sp-slider--bearing { background: var(--border-bright); }
+
+        .sp-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          cursor: pointer;
+          transition: transform 0.1s;
+        }
+        .sp-slider--fire::-webkit-slider-thumb    { background: var(--accent);      box-shadow: 0 0 7px var(--accent); }
+        .sp-slider--wind::-webkit-slider-thumb    { background: var(--accent-blue); box-shadow: 0 0 7px var(--accent-blue); }
+        .sp-slider--bearing::-webkit-slider-thumb { background: var(--text-secondary); }
+        .sp-slider::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+        .sp-scale {
+          display: flex;
+          justify-content: space-between;
+          font-family: var(--font-condensed);
+          font-size: 0.62rem;
+          color: var(--text-secondary);
+          letter-spacing: 0.05em;
+        }
+
+        .sp-bearing { display: flex; align-items: center; gap: 4px; }
+        .sp-bearing-input {
+          background: var(--background);
+          border: 1px solid var(--border);
+          color: var(--text-primary);
+          font-family: var(--font-mono);
+          font-size: 0.8rem;
+          padding: 5px 8px;
+          outline: none;
+          width: 58px;
+          text-align: right;
+          border-radius: 2px;
+          color-scheme: dark;
+        }
+        .sp-bearing-input:focus { border-color: var(--accent); }
+        .sp-bearing-unit { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); }
+        .sp-cardinal {
+          font-family: var(--font-condensed);
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: var(--accent-blue);
+          letter-spacing: 0.1em;
+          min-width: 26px;
+          text-align: center;
+        }
+
+        .sp-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+        .sp-chip {
+          background: transparent;
+          border: 1px solid var(--border);
+          color: var(--text-secondary);
+          font-family: var(--font-condensed);
+          font-size: 0.72rem;
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          padding: 5px 10px;
+          border-radius: 2px;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .sp-chip:hover { border-color: oklch(68% 0.18 45 / 0.6); color: var(--accent); }
+        .sp-chip--on   { border-color: var(--accent); color: var(--accent); background: oklch(68% 0.18 45 / 0.08); }
+
+        .sp-duration { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .sp-dur {
+          background: transparent;
+          border: 1px solid var(--border);
+          color: var(--text-secondary);
+          font-family: var(--font-condensed);
+          font-size: 0.88rem;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          padding: 11px 0;
+          cursor: pointer;
+          transition: all 0.15s;
+          border-radius: 2px;
+        }
+        .sp-dur:hover  { border-color: oklch(68% 0.18 45 / 0.5); color: var(--accent); }
+        .sp-dur--on    { border-color: var(--accent); color: var(--accent); background: oklch(68% 0.18 45 / 0.1); }
+
+        .sp-error {
+          background: oklch(63% 0.22 27 / 0.08);
+          border: 1px solid oklch(63% 0.22 27 / 0.3);
+          color: oklch(74% 0.16 28);
+          font-size: 0.8rem;
+          padding: 9px 12px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .sp-error-mark {
+          font-family: var(--font-condensed);
+          font-size: 0.9rem;
+          font-weight: 800;
+          color: var(--accent-red);
+          flex-shrink: 0;
+        }
+
+        .sp-launch {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          background: var(--accent);
+          color: oklch(9% 0.008 24);
+          font-family: var(--font-condensed);
+          font-size: 0.92rem;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          border: none;
+          padding: 15px;
+          cursor: pointer;
+          transition: box-shadow 0.18s;
+          width: 100%;
+          margin-top: 0.25rem;
+          border-radius: 2px;
+        }
+        .sp-launch:hover:not(:disabled) {
+          box-shadow: 0 0 0 2px oklch(68% 0.18 45 / 0.5), 0 0 24px oklch(68% 0.18 45 / 0.18);
+        }
+        .sp-launch:active:not(:disabled) { box-shadow: none; }
+        .sp-launch:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .sp-spinner {
+          width: 14px;
+          height: 14px;
+          border: 2px solid oklch(9% 0.008 24 / 0.35);
+          border-top-color: oklch(9% 0.008 24);
+          border-radius: 50%;
+          animation: sp-spin 0.7s linear infinite;
+          display: inline-block;
+          flex-shrink: 0;
+        }
+        @keyframes sp-spin { to { transform: rotate(360deg); } }
+
+        .sp-footer {
+          font-family: var(--font-condensed);
+          font-size: 0.58rem;
+          color: var(--text-muted);
+          letter-spacing: 0.12em;
+          text-align: center;
+        }
+
+        @media (max-width: 740px) {
+          .sp-main { grid-template-columns: 1fr; gap: 2.5rem; }
+          .sp-left { display: none; }
+        }
+        @media (max-width: 480px) {
+          .sp-root { padding: 2rem 1rem; }
+        }
       `}</style>
     </div>
   );
