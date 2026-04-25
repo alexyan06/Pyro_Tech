@@ -160,9 +160,12 @@ class TurnSequencer {
       });
 
       // Trip waypoints for car layer (every 4 physics ticks = 2 real seconds)
+      // Skip traffic refresh here when the % 20 block will call it in the same tick
       if (physicsCount % 4 === 0) {
         const baseData = this.stateManager.state.baseData || {};
-        this._refreshTrafficState(ws, elapsedSimHours, this._agentRunCount);
+        if (physicsCount % 20 !== 0) {
+          this._refreshTrafficState(ws, elapsedSimHours, this._agentRunCount);
+        }
         // scenario.bbox is stored as [west, south, east, north] — same shape particleEngine expects.
         const sbx = this.stateManager.state.scenario?.bbox;
         const normBbox = Array.isArray(sbx) && sbx.length === 4 ? sbx.slice() : null;

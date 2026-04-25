@@ -153,9 +153,29 @@ function distanceToPerimeterKm(perimFeature, routeLine) {
   return minDistance;
 }
 
+// Per-call cache keyed by a cheap perimeter fingerprint.
+// Safe because classifyRouteHazards is called multiple times per physics tick
+// with the same perimeter, and the perimeter regenerates every 500ms.
+let _hazardCache = { perimKey: null, result: null };
+
+function _perimKey(perimFeature) {
+  const coords = perimFeature?.geometry?.coordinates?.[0];
+  if (!coords || coords.length < 6) return null;
+  // Use first 3 + last 3 coordinate pairs as a cheap fingerprint
+  const sample = [coords[0], coords[1], coords[2], coords[coords.length - 3], coords[coords.length - 2], coords[coords.length - 1]];
+  return sample.map(c => `${c[0].toFixed(5)},${c[1].toFixed(5)}`).join('|');
+}
+
 function classifyRouteHazards(baseRoutes, firePerimeter, manuallyClosedRoutes = new Set()) {
   const perimFeature = getPerimeterFeature(firePerimeter);
-  return Object.values(baseRoutes || {}).map((route) => {
+
+  // Return cached result when perimeter hasn't changed and no manual closures differ
+  const key = perimFeature ? _perimKey(perimFeature) : null;
+  if (key && key === _hazardCache.perimKey && manuallyClosedRoutes.size === 0) {
+    return _hazardCache.result;
+  }
+
+  const result = Object.values(baseRoutes || {}).map((route) => {
     let capacityMultiplier = 1;
     let closureReason = manuallyClosedRoutes.has(route.route_id) ? 'manual' : null;
     let distance_to_fire_km = Infinity;
@@ -186,6 +206,12 @@ function classifyRouteHazards(baseRoutes, firePerimeter, manuallyClosedRoutes = 
       capacity_multiplier: capacityMultiplier,
     };
   });
+
+  // Cache when there are no manual closures (pure perimeter-based result is reusable)
+  if (key && manuallyClosedRoutes.size === 0) {
+    _hazardCache = { perimKey: key, result };
+  }
+  return result;
 }
 
 function fireClosedRouteIds(baseRoutes, firePerimeter) {
