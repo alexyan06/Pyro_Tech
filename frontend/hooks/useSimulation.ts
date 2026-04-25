@@ -5,7 +5,6 @@ import { WS_URL } from '@/lib/constants';
 import type {
   AgentName,
   MapEventData,
-  PhysicsTickMessage,
   PlaybookData,
   ScenarioInput,
   ServerMessage,
@@ -72,9 +71,6 @@ export function useSimulation(options: UseSimulationOptions = {}) {
   const onStateSnapshotRef = useRef(options.onStateSnapshot);
   const onParticleUpdateRef = useRef(options.onParticleUpdate);
   const simClockBaseRef = useRef<SimClockBase | null>(null);
-  // RAF batch for map_event messages — collapses rapid-fire agent events into one render per frame
-  const pendingMapEventsRef = useRef<Array<() => void>>([]);
-  const mapEventRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     onMapEventRef.current   = options.onMapEvent;
@@ -134,33 +130,8 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     wsRef.current = ws;
 
     ws.onopen  = () => { setIsConnected(true); };
-    ws.onclose = () => {
-      setIsConnected(false);
-      setIsRunning(false);
-      wsRef.current = null;
-      // Cancel any pending RAF flush
-      if (mapEventRafRef.current !== null) {
-        cancelAnimationFrame(mapEventRafRef.current);
-        mapEventRafRef.current = null;
-        pendingMapEventsRef.current = [];
-      }
-    };
+    ws.onclose = () => { setIsConnected(false); setIsRunning(false); wsRef.current = null; };
     ws.onerror = () => { console.error('WebSocket error'); };
-
-    // Flush batched map events in the next animation frame
-    const flushMapEvents = () => {
-      const pending = pendingMapEventsRef.current;
-      pendingMapEventsRef.current = [];
-      mapEventRafRef.current = null;
-      for (const fn of pending) fn();
-    };
-
-    const enqueueMapEvent = (fn: () => void) => {
-      pendingMapEventsRef.current.push(fn);
-      if (mapEventRafRef.current === null) {
-        mapEventRafRef.current = requestAnimationFrame(flushMapEvents);
-      }
-    };
 
     ws.onmessage = (event) => {
       let msg: ServerMessage & { type: string; payload: Record<string, unknown> };
@@ -172,24 +143,6 @@ export function useSimulation(options: UseSimulationOptions = {}) {
       }
 
       switch (msg.type) {
-        case 'physics_tick': {
-          // Bundled fire_update + time_update in one frame
-          const { fire, time } = msg.payload as {
-            fire?: { agent: AgentName; event: MapEventData & { ui_message?: string }; tick: number };
-            time?: { sim_time: string; elapsed_hours: number; duration_hours: number };
-          };
-          if (fire) {
-            enqueueMapEvent(() => {
-              onMapEventRef.current?.(fire.event, fire.agent, fire.event.ui_message);
-            });
-          }
-          if (time) {
-            updateSimClockBase(time.sim_time);
-            setSimTick(Math.floor(time.elapsed_hours));
-          }
-          break;
-        }
-
         case 'agent_text': {
           const { agent, text, is_complete } = msg.payload as { agent: AgentName; text: string; is_complete: boolean };
           setCurrentAgent(agent);
@@ -212,11 +165,8 @@ export function useSimulation(options: UseSimulationOptions = {}) {
               next.set(agent, [...existing, updated]);
               return next;
             });
-            // Append to flat chronological timeline, capped at 100 entries
-            setTimeline(prev => {
-              const next = [...prev, { agent, text: updated }];
-              return next.length > 100 ? next.slice(-100) : next;
-            });
+            // Append to flat chronological timeline
+            setTimeline(prev => [...prev, { agent, text: updated }]);
             streamBufferRef.current.set(agent, '');
             setCurrentText('');
             setCurrentAgent(null);
@@ -226,9 +176,7 @@ export function useSimulation(options: UseSimulationOptions = {}) {
 
         case 'map_event': {
           const payload = msg.payload as { event: MapEventData & { ui_message?: string }; agent?: AgentName };
-          enqueueMapEvent(() => {
-            onMapEventRef.current?.(payload.event, payload.agent, payload.event.ui_message);
-          });
+          onMapEventRef.current?.(payload.event, payload.agent, payload.event.ui_message);
           break;
         }
 
@@ -236,10 +184,9 @@ export function useSimulation(options: UseSimulationOptions = {}) {
           const snap = msg as unknown as StateSnapshot;
           setCurrentSnapshot(snap);
           setSnapshots(prev => {
-            // O(1) update: replace by tick using a Map, then re-derive sorted array
-            const map = new Map(prev.map(s => [s.payload.tick, s]));
-            map.set(snap.payload.tick, snap);
-            return Array.from(map.values()).sort((a, b) => a.payload.tick - b.payload.tick);
+            // Keep snapshots in tick order, replace if same tick
+            const existing = prev.filter(s => s.payload.tick !== snap.payload.tick);
+            return [...existing, snap].sort((a, b) => a.payload.tick - b.payload.tick);
           });
           setSimTick(Math.floor(snap.payload.elapsed_hours ?? snap.payload.tick));
           updateSimClockBase(snap.payload.sim_time);

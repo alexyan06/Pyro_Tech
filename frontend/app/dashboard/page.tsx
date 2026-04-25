@@ -331,16 +331,11 @@ export default function Home() {
   useEffect(() => {
     const timer = setInterval(() => {
       const now = Date.now();
-      // Guard: skip dispatch when there's nothing to prune (avoids unnecessary re-renders)
-      if (mapState.recentActions.length > 0) {
-        dispatch({ type: 'EXPIRE_RECENT_ACTIONS', olderThan: now - 6000 });
-      }
-      if (mapState.resourceDispatches.length > 0) {
-        dispatch({ type: 'PRUNE_RESOURCE_DISPATCHES', olderThan: now - 30000 });
-      }
-    }, 4000);
+      dispatch({ type: 'EXPIRE_RECENT_ACTIONS', olderThan: now - 6000 });
+      dispatch({ type: 'PRUNE_RESOURCE_DISPATCHES', olderThan: now - 30000 });
+    }, 2000);
     return () => clearInterval(timer);
-  }, [dispatch, mapState.recentActions.length, mapState.resourceDispatches.length]);
+  }, [dispatch]);
 
   // Derived state to show playbook modal — avoids synchronous setState in useEffect
   const playbookActive = !!playbook;

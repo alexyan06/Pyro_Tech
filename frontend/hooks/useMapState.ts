@@ -53,9 +53,7 @@ export interface MapState {
   evacuationFlows: Array<{ from: string; to: string; population: number }>;
   tripWaypoints: TripWaypoint[];
   routeCongestion: Record<string, { status: 'open' | 'congested' | 'closed'; load_pct: number; reason?: string; capacity_multiplier?: number }>;
-  routeCongestionVersion: number;
   trafficJams: Record<string, 'extreme' | 'high' | 'moderate'>;
-  trafficJamsVersion: number;
   threatZones: Record<string, 'extreme' | 'high' | 'moderate'>;
   alerts: Array<{ zone_ids: string[]; message: string; channel: string }>;
   particles: Array<[number, number]>;
@@ -118,9 +116,7 @@ const initialState: MapState = {
   evacuationFlows: [],
   tripWaypoints: [],
   routeCongestion: {},
-  routeCongestionVersion: 0,
   trafficJams: {},
-  trafficJamsVersion: 0,
   threatZones: {},
   alerts: [],
   particles: [],
@@ -238,15 +234,11 @@ function mapReducer(state: MapState, action: MapAction): MapState {
           capacity_multiplier: r.capacity_multiplier,
         };
       }
-      return { ...state, routeCongestion: next, routeCongestionVersion: state.routeCongestionVersion + 1 };
+      return { ...state, routeCongestion: next };
     }
 
     case 'SET_TRAFFIC_JAM':
-      return {
-        ...state,
-        trafficJams: { ...state.trafficJams, [action.routeId]: action.severity },
-        trafficJamsVersion: state.trafficJamsVersion + 1,
-      };
+      return { ...state, trafficJams: { ...state.trafficJams, [action.routeId]: action.severity } };
 
     case 'SET_THREAT_ZONE':
       return { ...state, threatZones: { ...state.threatZones, [action.zoneId]: action.level } };
@@ -295,9 +287,7 @@ function mapReducer(state: MapState, action: MapAction): MapState {
         ...initialState,
         closedRoutes: new Set<string>(),
         routeCongestion: {},
-        routeCongestionVersion: 0,
         trafficJams: {},
-        trafficJamsVersion: 0,
         threatZones: {},
         alerts: [],
         particles: [],

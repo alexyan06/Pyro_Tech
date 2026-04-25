@@ -41,8 +41,6 @@ export function createRouteLayer(
   closedRoutes: Set<string>,
   routeCongestion: Record<string, { status: string; load_pct: number }> = {},
   trafficJams: Record<string, 'extreme' | 'high' | 'moderate'> = {},
-  routeCongestionVersion = 0,
-  trafficJamsVersion = 0,
 ): PathLayer<RouteFeature> {
   const data = Object.values(routeFeatures).map(r => ({
     ...r,
@@ -83,8 +81,8 @@ export function createRouteLayer(
       getWidth: 400,
     },
     updateTriggers: {
-      getColor: [Array.from(closedRoutes).sort().join(','), routeCongestionVersion, trafficJamsVersion],
-      getWidth: [Array.from(closedRoutes).sort().join(','), routeCongestionVersion, trafficJamsVersion],
+      getColor: [Array.from(closedRoutes).sort().join(','), JSON.stringify(routeCongestion), JSON.stringify(trafficJams)],
+      getWidth: [Array.from(closedRoutes).sort().join(','), JSON.stringify(routeCongestion), JSON.stringify(trafficJams)],
     },
   });
 }

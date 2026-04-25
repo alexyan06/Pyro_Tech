@@ -146,21 +146,18 @@ class TurnSequencer {
         perimeter = engine.generatePerimeter(Math.max(0.01, elapsedSimHours), suppressionZones);
       }
       this.stateManager.applyEvent({ type: 'update_fire_perimeter', geojson: perimeter });
-
-      // Bundle fire_update + time_update into one frame to halve physics-loop message count
-      const fireEvent = { type: 'fire_update', geojson: perimeter };
-      this.sendToClient(ws, {
-        type: 'physics_tick',
-        payload: {
-          fire: { agent: 'disaster', event: fireEvent, tick: this._agentRunCount },
-          time: { sim_time: simTimeStr, elapsed_hours: elapsedSimHours, duration_hours: durationHours },
-        },
-      });
+      this._sendMapEvent(ws, 'disaster', { type: 'fire_update', geojson: perimeter }, this._agentRunCount);
 
       if (physicsCount % 4 === 0) {
         this._sendMapEvent(ws, 'disaster', this._buildFireBehaviorEvent(perimeter, elapsedSimHours), this._agentRunCount);
         this._refreshFireImpacts(ws, elapsedSimHours, this._agentRunCount);
       }
+
+      // Continuous simulation clock
+      this.sendToClient(ws, {
+        type: 'time_update',
+        payload: { sim_time: simTimeStr, elapsed_hours: elapsedSimHours, duration_hours: durationHours },
+      });
 
       // Trip waypoints for car layer (every 4 physics ticks = 2 real seconds)
       // Skip traffic refresh here when the % 20 block will call it in the same tick
@@ -204,7 +201,7 @@ class TurnSequencer {
           this.stateManager.state.fire.acres_burned || 0,
           elapsedSimHours,
         );
-        const snapshot = this.stateManager.getMetricsSnapshot(this._agentRunCount, simTimeStr, elapsedSimHours);
+        const snapshot = this.stateManager.getSnapshot(this._agentRunCount, simTimeStr, elapsedSimHours);
         this.sendToClient(ws, { type: 'state_snapshot', payload: snapshot });
       }
 
