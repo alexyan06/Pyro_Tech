@@ -3,8 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
+import MapView from '@/components/MapView';
 import AgentFeed from '@/components/AgentFeed';
 import MetricsBar from '@/components/MetricsBar';
 import PlaybookViewer from '@/components/PlaybookViewer';
