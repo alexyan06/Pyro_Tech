@@ -325,6 +325,25 @@ export default function Home() {
   const { isReplaying, replayTick, replaySnapshot, setReplayTick, exitReplay, minTick, maxTick } =
     useReplay(snapshots);
 
+  // When replaying, overlay snapshot data onto live mapState so the map rewinds correctly.
+  // Live state keeps updating in the background; when replay exits, live state is already current.
+  const displayMapState = isReplaying && replaySnapshot
+    ? {
+        ...mapState,
+        firePerimeter: replaySnapshot.payload.fire.perimeter_geojson,
+        zones: replaySnapshot.payload.evacuation.zones,
+        shelters: replaySnapshot.payload.resources.shelters,
+        // Clear live-state threat zones so they don't bleed into the historical zone colors.
+        // The snapshot's explicit zones record already covers all active statuses at that tick.
+        threatZones: {},
+        // Suppress ephemeral live elements that would look wrong on a historical frame
+        tripWaypoints: [],
+        particles: [],
+        recentActions: [],
+        resourceDispatches: [],
+      }
+    : mapState;
+
   useEffect(() => {
     connect();
   }, [connect]);
@@ -538,8 +557,9 @@ export default function Home() {
         {/* Map */}
         <div className="relative" style={{ width: `${mapWidth}%` }}>
           <MapView
-            mapState={mapState}
+            mapState={displayMapState}
             center={storedScenario ? { lat: storedScenario.centerLat, lng: storedScenario.centerLng } : undefined}
+            isReplaying={isReplaying}
           />
           <MapNotifications notifications={notifications} />
           {isRunning && (
