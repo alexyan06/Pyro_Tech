@@ -1,0 +1,330 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4437, 34.0689] },
+      "properties": {
+        "shelter_id": "S001",
+        "name": "UCLA Pauley Pavilion",
+        "capacity": 3000,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "301 Westwood Plaza, Los Angeles, CA 90095",
+        "type": "mega_shelter"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4912, 34.0195] },
+      "properties": {
+        "shelter_id": "S002",
+        "name": "Santa Monica Civic Auditorium",
+        "capacity": 3000,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "1855 Main St, Santa Monica, CA 90401",
+        "type": "mega_shelter"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.1517, 34.1478] },
+      "properties": {
+        "shelter_id": "S003",
+        "name": "Pasadena Convention Center",
+        "capacity": 5000,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "300 E Green St, Pasadena, CA 91101",
+        "type": "mega_shelter"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-117.9865, 34.1397] },
+      "properties": {
+        "shelter_id": "S004",
+        "name": "Arcadia Community Center",
+        "capacity": 500,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "365 Campus Dr, Arcadia, CA 91007",
+        "type": "community_center"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-117.7509, 34.0614] },
+      "properties": {
+        "shelter_id": "S005",
+        "name": "Pomona Fairplex",
+        "capacity": 10000,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "1101 W McKinley Ave, Pomona, CA 91768",
+        "type": "mega_shelter"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2688, 34.0401] },
+      "properties": {
+        "shelter_id": "S006",
+        "name": "Los Angeles Convention Center",
+        "capacity": 5000,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "1201 S Figueroa St, Los Angeles, CA 90015",
+        "type": "mega_shelter"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2401, 34.0739] },
+      "properties": {
+        "shelter_id": "S007",
+        "name": "Dodger Stadium",
+        "capacity": 5000,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "1000 Vin Scully Ave, Los Angeles, CA 90012",
+        "type": "mega_shelter"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2673, 34.0430] },
+      "properties": {
+        "shelter_id": "S008",
+        "name": "Crypto.com Arena (Staples Center Area)",
+        "capacity": 4000,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "1111 S Figueroa St, Los Angeles, CA 90015",
+        "type": "mega_shelter"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4854, 34.0210] },
+      "properties": {
+        "shelter_id": "S009",
+        "name": "Santa Monica High School",
+        "capacity": 1200,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "601 Pico Blvd, Santa Monica, CA 90405",
+        "type": "school"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4696, 34.0358] },
+      "properties": {
+        "shelter_id": "S010",
+        "name": "Lincoln Middle School",
+        "capacity": 800,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "1501 California Ave, Santa Monica, CA 90403",
+        "type": "school"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.1165, 34.1470] },
+      "properties": {
+        "shelter_id": "S011",
+        "name": "Pasadena City College",
+        "capacity": 2500,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "1570 E Colorado Blvd, Pasadena, CA 91106",
+        "type": "college"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.0296, 34.1306] },
+      "properties": {
+        "shelter_id": "S012",
+        "name": "Arcadia High School",
+        "capacity": 1000,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "180 Campus Dr, Arcadia, CA 91007",
+        "type": "school"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-117.9998, 34.1469] },
+      "properties": {
+        "shelter_id": "S013",
+        "name": "Monrovia Community Center",
+        "capacity": 400,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "119 W Palm Ave, Monrovia, CA 91016",
+        "type": "community_center"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2553, 34.1834] },
+      "properties": {
+        "shelter_id": "S014",
+        "name": "Glendale Civic Auditorium",
+        "capacity": 1500,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "1401 N Verdugo Rd, Glendale, CA 91208",
+        "type": "civic"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.3089, 34.1808] },
+      "properties": {
+        "shelter_id": "S015",
+        "name": "Burbank Community Services Building",
+        "capacity": 600,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "150 N Third St, Burbank, CA 91502",
+        "type": "community_center"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.3353, 34.0522] },
+      "properties": {
+        "shelter_id": "S016",
+        "name": "Westchester Recreation Center",
+        "capacity": 500,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "7000 W Manchester Ave, Los Angeles, CA 90045",
+        "type": "recreation_center"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2891, 34.0025] },
+      "properties": {
+        "shelter_id": "S017",
+        "name": "Inglewood High School",
+        "capacity": 900,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "231 S Grevillea Ave, Inglewood, CA 90301",
+        "type": "school"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.1706, 34.0560] },
+      "properties": {
+        "shelter_id": "S018",
+        "name": "El Monte Civic Center",
+        "capacity": 700,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "11333 Valley Blvd, El Monte, CA 91731",
+        "type": "civic"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2437, 34.0522] },
+      "properties": {
+        "shelter_id": "S019",
+        "name": "LA Memorial Sports Arena",
+        "capacity": 3500,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "3939 S Figueroa St, Los Angeles, CA 90037",
+        "type": "mega_shelter"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.3600, 34.1727] },
+      "properties": {
+        "shelter_id": "S020",
+        "name": "Van Nuys Recreation Center",
+        "capacity": 600,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "14201 Friar St, Van Nuys, CA 91401",
+        "type": "recreation_center"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4041, 34.0731] },
+      "properties": {
+        "shelter_id": "S021",
+        "name": "Brentwood Community Center",
+        "capacity": 400,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "11677 San Vicente Blvd, Los Angeles, CA 90049",
+        "type": "community_center"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.1295, 34.1761] },
+      "properties": {
+        "shelter_id": "S022",
+        "name": "Altadena Community Center",
+        "capacity": 350,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "730 E Altadena Dr, Altadena, CA 91001",
+        "type": "community_center"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2437, 33.9931] },
+      "properties": {
+        "shelter_id": "S023",
+        "name": "Gardena Valley Japanese Cultural Institute",
+        "capacity": 250,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "1964 W 162nd St, Gardena, CA 90247",
+        "type": "community_center"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.0556, 34.1383] },
+      "properties": {
+        "shelter_id": "S024",
+        "name": "Duarte Community Center",
+        "capacity": 300,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "1600 Huntington Dr, Duarte, CA 91010",
+        "type": "community_center"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.3965, 33.9425] },
+      "properties": {
+        "shelter_id": "S025",
+        "name": "SoFi Stadium Parking / Event Area",
+        "capacity": 8000,
+        "current_occupancy": 0,
+        "status": "open",
+        "address": "1001 Stadium Dr, Inglewood, CA 90301",
+        "type": "mega_shelter"
+      }
+    }
+  ]
+}
