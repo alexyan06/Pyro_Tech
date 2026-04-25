@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback } from 'react';
-import type { PlaybookData } from '@/lib/types';
+import { useCallback, useEffect } from 'react';
+import type { PlaybookData, PlaybookSection } from '@/lib/types';
 import { AGENT_CONFIG } from '@/lib/types';
 import type { AgentName } from '@/lib/types';
 
@@ -10,22 +10,184 @@ interface PlaybookViewerProps {
   onClose: () => void;
 }
 
-function getTimeElapsedLabel(section: { time_elapsed?: string; tick?: number }) {
-  return section.time_elapsed ?? (section.tick != null ? `${section.tick}h` : '0m');
+const AGENT_TOKEN: Record<string, string> = {
+  disaster: 'var(--accent-red)',
+  evacuation: 'var(--accent-blue)',
+  resource: 'var(--accent-green)',
+  infrastructure: 'var(--accent-yellow)',
+  communications: 'var(--accent-orange)',
+  synthesis: 'var(--accent-purple)',
+  traffic: 'var(--accent-orange)',
+};
+
+function getTimecode(section: PlaybookSection): string {
+  if (section.time_elapsed) return `T+${section.time_elapsed.toUpperCase()}`;
+  const hoursValue = section.elapsed_hours ?? section.tick;
+  if (hoursValue == null) return 'T+00:00';
+  const totalMinutes = Math.round(hoursValue * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `T+${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-export default function PlaybookViewer({
-  playbook,
-  onClose,
-}: PlaybookViewerProps) {
+function inferDurationHours(playbook: PlaybookData): number {
+  if (playbook.duration_hours != null) return playbook.duration_hours;
+  let max = 0;
+  for (const s of playbook.sections) {
+    const v = s.elapsed_hours ?? s.tick ?? 0;
+    if (v > max) max = v;
+  }
+  return max;
+}
+
+function formatDuration(hours: number): string {
+  const totalMinutes = Math.max(0, Math.round(hours * 60));
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function formatGenerated(raw: string): string {
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+
+function PanelButton({
+  label,
+  onClick,
+  variant = 'neutral',
+}: {
+  label: string;
+  onClick: () => void;
+  variant?: 'neutral' | 'command';
+}) {
+  const color = variant === 'command' ? 'var(--accent-purple)' : 'var(--text-secondary)';
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        height: '30px',
+        border: '1px solid var(--border)',
+        borderRadius: '2px',
+        padding: '0 14px',
+        background: 'transparent',
+        color,
+        fontFamily: 'var(--font-condensed)',
+        fontSize: '0.72rem',
+        fontWeight: 600,
+        letterSpacing: '0.12em',
+        textTransform: 'uppercase',
+        cursor: 'pointer',
+        transition: 'background 0.15s ease, border-color 0.15s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'var(--surface-raised)';
+        e.currentTarget.style.borderColor = 'var(--border-bright)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent';
+        e.currentTarget.style.borderColor = 'var(--border)';
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function MetaField({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <span
+        style={{
+          fontFamily: 'var(--font-condensed)',
+          fontSize: '0.54rem',
+          fontWeight: 600,
+          letterSpacing: '0.2em',
+          textTransform: 'uppercase',
+          color: 'var(--text-muted)',
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.78rem',
+          fontWeight: 600,
+          letterSpacing: '0.04em',
+          color: 'var(--text-primary)',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function CallsignRow({
+  color,
+  callsign,
+  timecode,
+}: {
+  color: string;
+  callsign: string;
+  timecode: string;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <span
+        style={{
+          fontFamily: 'var(--font-condensed)',
+          fontSize: '0.7rem',
+          fontWeight: 700,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color,
+          flexShrink: 0,
+        }}
+      >
+        {callsign}
+      </span>
+      <span
+        aria-hidden
+        style={{
+          flex: 1,
+          height: '1px',
+          background: color,
+          opacity: 0.18,
+        }}
+      />
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.7rem',
+          fontWeight: 600,
+          letterSpacing: '0.04em',
+          color: 'var(--text-secondary)',
+          flexShrink: 0,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {timecode}
+      </span>
+    </div>
+  );
+}
+
+export default function PlaybookViewer({ playbook, onClose }: PlaybookViewerProps) {
   const handleDownloadPdf = useCallback(async () => {
     if (!playbook) return;
 
-    // Dynamic import pdfmake for client-side only
     const pdfMake = await import('pdfmake/build/pdfmake');
     const pdfFonts = await import('pdfmake/build/vfs_fonts');
 
-    // Assign virtual file system
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pdfMakeInstance = (pdfMake as any).default || pdfMake;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,7 +224,7 @@ export default function PlaybookViewer({
             margin: [0, 15, 0, 5] as [number, number, number, number],
           },
           {
-            text: `Agent: ${section.agent} | Time Elapsed: ${getTimeElapsedLabel(section)}`,
+            text: `Agent: ${section.agent} | Time Elapsed: ${section.time_elapsed ?? `${section.tick ?? 0}h`}`,
             style: 'meta',
             margin: [0, 0, 0, 5] as [number, number, number, number],
           },
@@ -94,100 +256,220 @@ export default function PlaybookViewer({
     pdfMakeInstance.createPdf(docDefinition).download('ember-playbook.pdf');
   }, [playbook]);
 
+  useEffect(() => {
+    if (!playbook) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [playbook, onClose]);
+
   if (!playbook) return null;
 
+  const generatedDisplay = formatGenerated(playbook.generated_at);
+  const durationDisplay = formatDuration(inferDurationHours(playbook));
+  const sectionsDisplay = String(playbook.sections.length).padStart(2, '0');
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Incident Action Plan"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        background: 'oklch(4% 0.005 24 / 0.78)',
+        animation: 'iap-overlay-in 180ms cubic-bezier(0.22, 1, 0.36, 1)',
+      }}
+    >
+      <style>{`
+        @keyframes iap-overlay-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes iap-document-in {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
       <div
-        className="relative flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl border"
         style={{
-          borderColor: 'var(--border)',
-          background: 'var(--panel-bg)',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          maxWidth: '820px',
+          maxHeight: '88vh',
+          background: 'var(--surface)',
+          border: '1px solid var(--border-bright)',
+          borderRadius: '2px',
+          animation: 'iap-document-in 220ms cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between border-b px-6 py-4"
-          style={{ borderColor: 'var(--border)' }}
+        <div style={{ height: '2px', background: 'var(--accent)' }} />
+
+        <header
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '24px',
+            padding: '18px 24px 16px',
+            borderBottom: '1px solid var(--border)',
+          }}
         >
-          <div>
-            <h2 className="text-xl font-bold text-white">{playbook.title}</h2>
-            <p className="mt-1 text-sm text-gray-500">{playbook.scenario}</p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleDownloadPdf}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div
               style={{
-                background: 'linear-gradient(135deg, #aa66ff, #4488ff)',
+                fontFamily: 'var(--font-condensed)',
+                fontSize: '0.56rem',
+                fontWeight: 600,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
               }}
             >
-              Download PDF
-            </button>
-            <button
-              onClick={onClose}
-              className="rounded-lg border px-4 py-2 text-sm text-gray-400 transition-colors hover:bg-gray-800"
-              style={{ borderColor: 'var(--border)' }}
+              Incident Action Plan
+            </div>
+            <h2
+              style={{
+                margin: '6px 0 0',
+                fontFamily: 'var(--font-condensed)',
+                fontSize: '1.05rem',
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: 'var(--text-primary)',
+                lineHeight: 1.1,
+              }}
             >
-              Close
-            </button>
+              {playbook.title}
+            </h2>
+            <p
+              style={{
+                margin: '8px 0 0',
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.78rem',
+                lineHeight: 1.55,
+                color: 'var(--text-secondary)',
+                maxWidth: '60ch',
+              }}
+            >
+              {playbook.scenario}
+            </p>
           </div>
+          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+            <PanelButton label="Export PDF" onClick={handleDownloadPdf} variant="command" />
+            <PanelButton label="Close" onClick={onClose} />
+          </div>
+        </header>
+
+        <div
+          style={{
+            display: 'flex',
+            gap: '36px',
+            padding: '12px 24px',
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--background)',
+          }}
+        >
+          <MetaField label="Generated" value={generatedDisplay} />
+          <MetaField label="Duration" value={durationDisplay} />
+          <MetaField label="Sections" value={sectionsDisplay} />
         </div>
 
-        {/* Sections */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '4px 24px 24px',
+          }}
+        >
           {playbook.sections.map((section, i) => {
             const agentKey = section.agent as AgentName;
             const config = AGENT_CONFIG[agentKey];
+            const tokenColor = AGENT_TOKEN[section.agent] ?? 'var(--text-muted)';
+            const callsign = (config?.label ?? section.agent).toUpperCase();
             return (
-              <div
+              <article
                 key={i}
-                className="mb-4 rounded-lg border p-4"
                 style={{
-                  borderColor: config ? config.color + '33' : 'var(--border)',
-                  background: config ? config.color + '08' : 'transparent',
+                  paddingTop: '20px',
+                  paddingBottom: '22px',
+                  borderBottom:
+                    i === playbook.sections.length - 1
+                      ? 'none'
+                      : '1px solid var(--border-subtle)',
                 }}
               >
-                <div className="mb-2 flex items-center gap-2">
-                  {config && (
-                    <span className="text-sm">{config.emoji}</span>
-                  )}
-                  <h3
-                    className="text-sm font-semibold"
-                    style={{ color: config?.color || 'var(--foreground)' }}
-                  >
-                    {section.title}
-                  </h3>
-                  <span className="ml-auto text-xs text-gray-600">
-                    Time Elapsed: {getTimeElapsedLabel(section)}
-                  </span>
-                </div>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-300">
+                <CallsignRow color={tokenColor} callsign={callsign} timecode={getTimecode(section)} />
+                <h3
+                  style={{
+                    margin: '12px 0 10px',
+                    fontFamily: 'var(--font-condensed)',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {section.title}
+                </h3>
+                <p
+                  style={{
+                    margin: 0,
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '0.86rem',
+                    lineHeight: 1.65,
+                    color: 'var(--text-primary)',
+                    maxWidth: '70ch',
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
                   {section.content}
                 </p>
-              </div>
+              </article>
             );
           })}
 
-          {/* Summary */}
-          <div
-            className="mt-6 rounded-lg border p-4"
-            style={{ borderColor: 'var(--accent-purple)' + '33' }}
+          <article
+            style={{
+              marginTop: '6px',
+              paddingTop: '24px',
+              paddingBottom: '6px',
+              borderTop: '1px solid var(--border)',
+            }}
           >
-            <h3
-              className="mb-2 text-sm font-semibold"
-              style={{ color: 'var(--accent-purple)' }}
+            <CallsignRow
+              color="var(--accent-purple)"
+              callsign="Incident Command"
+              timecode="Consolidated"
+            />
+            <p
+              style={{
+                margin: '14px 0 0',
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.86rem',
+                lineHeight: 1.65,
+                color: 'var(--text-primary)',
+                maxWidth: '70ch',
+                whiteSpace: 'pre-wrap',
+              }}
             >
-              Summary
-            </h3>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-300">
               {playbook.summary}
             </p>
-          </div>
-
-          <p className="mt-4 text-xs text-gray-600">
-            Generated: {playbook.generated_at}
-          </p>
+          </article>
         </div>
       </div>
     </div>
