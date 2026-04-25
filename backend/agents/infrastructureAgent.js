@@ -16,7 +16,7 @@ YOUR RESPONSE MUST INCLUDE:
 
 2. JSON map events in triple-backtick json fences:
 - {"type": "infrastructure_status", "facility_id": "ID", "name": "NAME", "status": "operational"|"at_risk"|"offline", "details": "DESC"}
-- {"type": "power_shutoff", "area_id": "NAME", "affected_customers": NUM}
+- {"type": "power_shutoff", "area_id": "ID", "affected_customers": NUM}
 - {"type": "agent_confidence", "score": 0-100}
 
 GUIDELINES:
@@ -28,14 +28,17 @@ class InfrastructureAgent extends BaseAgent {
   }
 
   _simulatedResponse(context) {
-    const tick = (context.match(/Tick (\\d+) of/) || [])[1] || '1';
-    return `Resource, heads up — we've lost three cell towers on Topanga Ridge, so communications there will be unreliable. I'm cutting power to the Palisades grid right now to stop the fire from following those lines.
+    const { location, zones } = this._parseContext(context);
+    const z1_name = zones[0]?.name || 'the primary zone';
+    const z1_id = zones[0]?.id || 'Z001';
+
+    return `Resource, heads up — we've lost communication nodes in the hills above ${location}, so coordination there will be unreliable. I'm cutting power to the ${z1_name} grid right now as a precaution to stop the fire from following those lines.
 
 \`\`\`json
-{"type": "infrastructure_status", "facility_id": "topanga-cell-towers", "name": "Topanga Ridge Cell Towers", "status": "offline", "details": "3 towers offline"}
+{"type": "infrastructure_status", "facility_id": "cell-tower-001", "name": "Regional Cell Towers", "status": "offline", "details": "Multiple towers offline"}
 \`\`\`
 \`\`\`json
-{"type": "power_shutoff", "area_id": "Pacific Palisades PSPS", "affected_customers": 47000}
+{"type": "power_shutoff", "area_id": "${z1_id}", "affected_customers": 47000}
 \`\`\`
 \`\`\`json
 {"type": "agent_confidence", "score": 92}

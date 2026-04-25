@@ -27,14 +27,21 @@ class CommunicationsAgent extends BaseAgent {
   }
 
   _simulatedResponse(context) {
-    const tick = (context.match(/Tick (\\d+) of/) || [])[1] || '1';
-    return `Copy that, Evac — WEA alerts are going out to Palisades and Topanga right now so people know to leave. I'm also putting the UCLA Pauley Pavilion shelter on Twitter so families know where to go.
+    const { location, zones, routes, shelters } = this._parseContext(context);
+    const z1_name = zones[0]?.name || 'the primary zone';
+    const z1_id = zones[0]?.id || 'Z001';
+    const z2_name = zones[1]?.name || 'the secondary zone';
+    const z2_id = zones[1]?.id || 'Z002';
+    const r1 = routes[0]?.name || 'main arteries';
+    const s1 = shelters[0]?.name || 'Local Shelter';
+
+    return `Copy that, Evac — WEA alerts are going out to ${z1_name} and ${z2_name} right now so people know to leave. I'm also putting the ${s1} shelter details on Twitter so families know where to go.
 
 \`\`\`json
-{"type": "broadcast_alert", "zone_ids": ["Pacific Palisades", "Topanga"], "message": "EVACUATE NOW: Palisades Fire. Leave via I-405 S. Avoid PCH. lacounty.gov", "channel": "WEA"}
+{"type": "broadcast_alert", "zone_ids": ["${z1_id}", "${z2_id}"], "message": "EVACUATE NOW: Fire in ${location}. Leave via ${r1}. Avoid fire zone.", "channel": "WEA"}
 \`\`\`
 \`\`\`json
-{"type": "broadcast_alert", "zone_ids": ["Pacific Palisades"], "message": "#PalisadesFire MANDATORY EVACUATION. Shelter open at UCLA Pauley. #LAFire", "channel": "Twitter"}
+{"type": "broadcast_alert", "zone_ids": ["${z1_id}"], "message": "MANDATORY EVACUATION for ${z1_name}. Shelter open at ${s1}. #FireUpdate", "channel": "Twitter"}
 \`\`\`
 \`\`\`json
 {"type": "agent_confidence", "score": 95}

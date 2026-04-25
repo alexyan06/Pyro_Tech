@@ -1,8 +1,8 @@
 const { BaseAgent } = require('./baseAgent');
 
-const SYSTEM_PROMPT = `You are "Command", the Incident Commander in a live wildfire incident command radio call.
+const SYSTEM_PROMPT = `You are "Incident Command", the incident commander in a live wildfire incident command radio call.
 
-ROLE: Resolve conflicts between agents, finalize the plan, and summarize the tick.
+ROLE: Make the final coordinated decision each tick. Summarize Fire Behavior, Evacuation, Traffic, and Resources in one clear command decision.
 
 You are joining a group radio call. The previous speaker's message is in your context. Start your response by acknowledging what the previous speaker said — address them by role, react to their key decision, then give your own update. Example: "Copy on the mandatory evac for Zone A — we've got two engines staged at Sunset and Mulholland ready to support."
 
@@ -16,11 +16,12 @@ YOUR RESPONSE MUST INCLUDE:
 
 2. JSON map events in triple-backtick json fences:
 - {"type": "resolve_conflict", "conflict_id": "DESC", "agents": ["AGENT_1", "AGENT_2"], "resolution": "DESC", "action": "ACTION"}
-- {"type": "playbook_section", "section_id": "ID", "title": "TITLE", "content": "DESC", "priority": "high"}
-- {"type": "tick_summary", "tick": NUM, "acres_burned": NUM, "percent_contained": NUM, "evacuees": NUM, "structures_threatened": NUM, "resources_deployed": NUM, "key_decisions": ["DECISION"], "next_priorities": ["PRIORITY"]}
+- {"type": "playbook_section", "section_id": "ID", "title": "TITLE", "content": "DESC", "priority": "high", "ui_message": "Command plan updated"}
+- {"type": "tick_summary", "tick": NUM, "acres_burned": NUM, "percent_contained": NUM, "evacuees": NUM, "structures_threatened": NUM, "resources_deployed": NUM, "key_decisions": ["DECISION"], "next_priorities": ["PRIORITY"], "ui_message": "Incident command updated"}
 - {"type": "agent_confidence", "score": 0-100}
 
 GUIDELINES:
+- Add a concise ui_message (80 characters or fewer) to every map-changing or playbook event.
 - Address conflicts directly by naming the agents.`;
 
 class SynthesisAgent extends BaseAgent {
@@ -29,15 +30,19 @@ class SynthesisAgent extends BaseAgent {
   }
 
   _simulatedResponse(context) {
-    const tick = (context.match(/Tick (\\d+) of/) || [])[1] || '1';
-    const acres = tick * 3500;
-    return `Good work everyone — Infra's right that Topanga towers are down, so Comms you'll need to lean on WEA and Nixle there, not social. All deployments are approved; Mandeville's our line in the sand.
+    const { location, tick, zones, routes } = this._parseContext(context);
+    const z1 = zones[0]?.name || 'the primary zone';
+    const r1 = routes[0]?.name || 'main arteries';
+    const acres = Number(context.match(/- Fire: ([\d,]+) acres burned/)?.[1]?.replace(/,/g, '')) || 0;
+    const evacuees = Number(context.match(/- Total evacuees: ([\d,]+)/)?.[1]?.replace(/,/g, '')) || 0;
+
+    return `Good work everyone — Fire Behavior has the threat area, Evacuation has people moving, Traffic is watching the roads, and Resources are approved. Keep the priority on life safety and holding the line at ${location}.
 
 \`\`\`json
-{"type": "resolve_conflict", "conflict_id": "comms-topanga", "agents": ["infra", "comms"], "resolution": "Topanga towers offline, use WEA/Nixle", "action": "Shift comms strategy away from social media in Topanga"}
+{"type": "playbook_section", "section_id": "command-${tick}", "title": "Incident Command Decision", "content": "Prioritize evacuation from ${z1}, keep ${r1} monitored, and approve resource deployments near ${location}.", "priority": "high", "ui_message": "Incident command plan updated"}
 \`\`\`
 \`\`\`json
-{"type": "tick_summary", "tick": ${tick}, "acres_burned": ${acres}, "percent_contained": 5, "evacuees": 27000, "structures_threatened": 450, "resources_deployed": 55, "key_decisions": ["PSPS for Palisades", "Mandatory Evac for Topanga"], "next_priorities": ["Contain Mandeville", "Clear PCH traffic"]}
+{"type": "tick_summary", "tick": ${tick}, "acres_burned": ${acres}, "percent_contained": 5, "evacuees": ${evacuees}, "structures_threatened": 450, "resources_deployed": 55, "key_decisions": ["Mandatory evacuation for ${z1}", "Resources approved near ${location}"], "next_priorities": ["Protect life safety", "Hold fire edge", "Keep ${r1} moving"], "ui_message": "Command summary updated"}
 \`\`\`
 \`\`\`json
 {"type": "agent_confidence", "score": 88}
