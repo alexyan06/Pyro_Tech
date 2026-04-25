@@ -1,0 +1,473 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.6946, 34.0367] },
+      "properties": {
+        "id": "fire_station_001",
+        "name": "LAFD Station 19 (Malibu)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "28960 W Pacific Coast Hwy, Malibu"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.5276, 34.0461] },
+      "properties": {
+        "id": "fire_station_002",
+        "name": "LAFD Station 69 (Pacific Palisades)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "15045 W Sunset Blvd, Pacific Palisades"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4667, 34.0922] },
+      "properties": {
+        "id": "fire_station_003",
+        "name": "LAFD Station 71 (Bel Air)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "1139 Moraga Dr, Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.3234, 34.1025] },
+      "properties": {
+        "id": "fire_station_004",
+        "name": "LAFD Station 12 (Hollywood Hills)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "2049 N Cahuenga Blvd, Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2437, 34.0522] },
+      "properties": {
+        "id": "fire_station_005",
+        "name": "LAFD Station 3 (Downtown LA)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "108 N Fremont Ave, Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.3614, 34.0534] },
+      "properties": {
+        "id": "fire_station_006",
+        "name": "LAFD Station 37 (Mid-City)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "6234 W 83rd St, Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4107, 33.9984] },
+      "properties": {
+        "id": "fire_station_007",
+        "name": "LAFD Station 67 (Playa Del Rey)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "8400 Pershing Dr, Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.1684, 34.1478] },
+      "properties": {
+        "id": "fire_station_008",
+        "name": "LAFD Station 77 (Eagle Rock)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "1430 N Topanga Dr, Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2960, 34.1601] },
+      "properties": {
+        "id": "fire_station_009",
+        "name": "LAFD Station 60 (Sunland)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "8510 Foothill Blvd, Sunland"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.5531, 34.1800] },
+      "properties": {
+        "id": "fire_station_010",
+        "name": "LAFD Station 84 (Chatsworth)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "20421 Devonshire St, Chatsworth"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4500, 34.1820] },
+      "properties": {
+        "id": "fire_station_011",
+        "name": "LAFD Station 88 (Granada Hills)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "17243 Tribune St, Granada Hills"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.3794, 34.1860] },
+      "properties": {
+        "id": "fire_station_012",
+        "name": "LAFD Station 91 (Northridge)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "9834 Reseda Blvd, Northridge"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.3080, 34.1800] },
+      "properties": {
+        "id": "fire_station_013",
+        "name": "LAFD Station 89 (Sun Valley)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "8770 Laurel Canyon Blvd, Sun Valley"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2273, 34.0195] },
+      "properties": {
+        "id": "fire_station_014",
+        "name": "LAFD Station 2 (Lincoln Heights)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "2230 Pasadena Ave, Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2870, 33.9823] },
+      "properties": {
+        "id": "fire_station_015",
+        "name": "LAFD Station 33 (Watts)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "10234 S Central Ave, Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.1595, 33.8000] },
+      "properties": {
+        "id": "fire_station_016",
+        "name": "Long Beach Fire Station 10",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Long Beach Fire Department",
+        "address": "2730 E Pacific Coast Hwy, Long Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.1920, 33.7980] },
+      "properties": {
+        "id": "fire_station_017",
+        "name": "Long Beach Fire Station 1",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Long Beach Fire Department",
+        "address": "100 W Broadway, Long Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.0878, 34.1478] },
+      "properties": {
+        "id": "fire_station_018",
+        "name": "Pasadena Fire Station 33",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Pasadena Fire Department",
+        "address": "985 E Colorado Blvd, Pasadena"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.1311, 34.1430] },
+      "properties": {
+        "id": "fire_station_019",
+        "name": "Arcadia Fire Station 105",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Arcadia Fire Department",
+        "address": "710 S Santa Anita Ave, Arcadia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.3774, 34.0622] },
+      "properties": {
+        "id": "fire_station_020",
+        "name": "Beverly Hills Fire Station 2",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Beverly Hills Fire Department",
+        "address": "325 N Foothill Rd, Beverly Hills"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4912, 34.0195] },
+      "properties": {
+        "id": "fire_station_021",
+        "name": "Santa Monica Fire Station 1",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Santa Monica Fire Department",
+        "address": "1444 7th St, Santa Monica"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4267, 33.9656] },
+      "properties": {
+        "id": "fire_station_022",
+        "name": "El Segundo Fire Station 1",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "El Segundo Fire Department",
+        "address": "314 Main St, El Segundo"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.3720, 33.8942] },
+      "properties": {
+        "id": "fire_station_023",
+        "name": "Hawthorne Fire Station 1",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Hawthorne Fire Department",
+        "address": "4343 W El Segundo Blvd, Hawthorne"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.2880, 33.8617] },
+      "properties": {
+        "id": "fire_station_024",
+        "name": "Compton Fire Station 1",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Compton Fire Department",
+        "address": "100 N Acacia Ave, Compton"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.0278, 33.9067] },
+      "properties": {
+        "id": "fire_station_025",
+        "name": "Downey Fire Station 1",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Downey Fire Department",
+        "address": "10911 Brookshire Ave, Downey"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-117.9512, 33.8953] },
+      "properties": {
+        "id": "fire_station_026",
+        "name": "Cerritos Fire Station 1",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Cerritos Sheriff Fire",
+        "address": "18135 Bloomfield Ave, Cerritos"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-117.8256, 34.0625] },
+      "properties": {
+        "id": "fire_station_027",
+        "name": "West Covina Fire Station 1",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "West Covina Fire Department",
+        "address": "1444 W Garvey Ave N, West Covina"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-117.9067, 34.1067] },
+      "properties": {
+        "id": "fire_station_028",
+        "name": "Pomona Fire Station 1",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Pomona Fire Department",
+        "address": "490 W Mission Blvd, Pomona"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.0000, 34.1678] },
+      "properties": {
+        "id": "fire_station_029",
+        "name": "Glendora Fire Station 182",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Glendora Fire Department",
+        "address": "353 E Foothill Blvd, Glendora"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.5965, 34.2178] },
+      "properties": {
+        "id": "fire_station_030",
+        "name": "LAFD Station 74 (Topanga)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "20456 Callon Dr, Topanga"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.7023, 34.2550] },
+      "properties": {
+        "id": "fire_station_031",
+        "name": "LAFD Station 104 (Calabasas)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "4081 Las Virgenes Rd, Calabasas"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.5312, 34.2678] },
+      "properties": {
+        "id": "fire_station_032",
+        "name": "LAFD Station 83 (West Hills)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "7777 Fallbrook Ave, West Hills"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4733, 34.2556] },
+      "properties": {
+        "id": "fire_station_033",
+        "name": "LAFD Station 97 (Reseda)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "6731 Lindley Ave, Reseda"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.5456, 34.1556] },
+      "properties": {
+        "id": "fire_station_034",
+        "name": "LAFD Station 93 (Canoga Park)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "21040 Vanowen St, Canoga Park"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.4611, 34.1556] },
+      "properties": {
+        "id": "fire_station_035",
+        "name": "LAFD Station 90 (Van Nuys)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "14610 Erwin St, Van Nuys"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-118.3367, 34.1556] },
+      "properties": {
+        "id": "fire_station_036",
+        "name": "LAFD Station 98 (North Hollywood)",
+        "type": "fire_station",
+        "status": "operational",
+        "capacity": null,
+        "department": "Los Angeles Fire Department",
+        "address": "11430 Burbank Blvd, North Hollywood"
+      }
+    }
+  ]
+}

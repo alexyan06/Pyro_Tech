@@ -1,0 +1,4031 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.336534,
+          34.274213
+        ]
+      },
+      "properties": {
+        "id": "hospital_001",
+        "name": "Lakeview Terrace Sanitarium",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 358808225,
+        "emergency": "no",
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.198402,
+          33.795573
+        ]
+      },
+      "properties": {
+        "id": "hospital_002",
+        "name": "Tarzana Treatment Centers Long Beach",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 358808301,
+        "emergency": "no",
+        "phone": "+1 562 218 1868",
+        "website": "https://www.tarzanatc.org/location-detail/long-beach/2101-magnolia-avenue/",
+        "address": "2101 Magnolia Avenue Long Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.186461,
+          34.01918
+        ]
+      },
+      "properties": {
+        "id": "hospital_003",
+        "name": "Los Angeles Community Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 358826153,
+        "emergency": "yes",
+        "phone": "+1 323 267 0477",
+        "website": "https://www.lach-la.com/",
+        "address": "4081 East Olympic Boulevard Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.185817,
+          33.8085
+        ]
+      },
+      "properties": {
+        "id": "hospital_004",
+        "name": "Jonathan Jaques Children's Cancer Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 358857876,
+        "emergency": "no",
+        "phone": "+1 562 933 8500",
+        "website": "https://www.millerchildrenshospitallb.org/cancer",
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.186044,
+          33.808616
+        ]
+      },
+      "properties": {
+        "id": "hospital_005",
+        "name": "Miller Children's & Women's Hospital Long Beach",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 358857879,
+        "emergency": "no",
+        "phone": "+1 562 933 5437",
+        "website": "https://www.millerchildrenshospitallb.org/",
+        "address": "2801 Atlantic Avenue Long Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.119329,
+          33.755765
+        ]
+      },
+      "properties": {
+        "id": "hospital_006",
+        "name": "Naples Medical Group",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1544314389,
+        "emergency": "no",
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.447112,
+          34.066327
+        ]
+      },
+      "properties": {
+        "id": "hospital_007",
+        "name": "Mattel Children's Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1894122907,
+        "emergency": "no",
+        "phone": "+1 310 825 9111",
+        "website": "https://www.uclahealth.org/hospitals/mattel",
+        "address": "757 Westwood Plaza Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.446501,
+          34.066103
+        ]
+      },
+      "properties": {
+        "id": "hospital_008",
+        "name": "Resnick Neuropsychiatric Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1894122910,
+        "emergency": "no",
+        "phone": "+1-310-825-9111",
+        "website": "https://www.uclahealth.org/hospitals/resnick",
+        "address": "150 UCLA Medical Plaza Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.561841,
+          34.275198
+        ]
+      },
+      "properties": {
+        "id": "hospital_009",
+        "name": "Nu Vela Esthetica",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 2351670047,
+        "emergency": "no",
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.444278,
+          34.065767
+        ]
+      },
+      "properties": {
+        "id": "hospital_010",
+        "name": "Neurological Rehabilitation & Research Unit",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 2392101217,
+        "emergency": "no",
+        "phone": "+1 310 794 6556",
+        "website": "http://rehab.ucla.edu/body.cfm?id=29",
+        "address": "760 Westwood Plaza Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.266191,
+          34.007317
+        ]
+      },
+      "properties": {
+        "id": "hospital_011",
+        "name": "Kedren Community Health Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 2556689683,
+        "emergency": "no",
+        "phone": "+1 323 233 0425",
+        "website": "https://kedren.org/",
+        "address": "4211 South Avalon Boulevard Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.865282,
+          34.127666
+        ]
+      },
+      "properties": {
+        "id": "hospital_012",
+        "name": "Emergency Room",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 4342033522,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.58954,
+          34.170771
+        ]
+      },
+      "properties": {
+        "id": "hospital_013",
+        "name": "Kaiser Permanente",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 6322407377,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.188931,
+          33.807691
+        ]
+      },
+      "properties": {
+        "id": "hospital_014",
+        "name": "Todd Cancer Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 6415540957,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.104695,
+          34.102044
+        ]
+      },
+      "properties": {
+        "id": "hospital_015",
+        "name": "EndoCare Center, Endodontic Office of Dr. John Yu",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 8519665340,
+        "emergency": null,
+        "phone": "+1 626-678-0167",
+        "website": "https://www.endocarecenter.com/",
+        "address": "416 West Las Tunas Drive San Gabriel"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.468297,
+          34.07237
+        ]
+      },
+      "properties": {
+        "id": "hospital_016",
+        "name": "Covid Testing (PCR 30 mins)",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 8831156390,
+        "emergency": null,
+        "phone": "+1-310-569-5784",
+        "website": "https://911covidtesting.com/",
+        "address": "11461 Sunset Boulevard Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.411745,
+          34.059131
+        ]
+      },
+      "properties": {
+        "id": "hospital_017",
+        "name": "California Rehabilitation Institute",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 9008836961,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.248545,
+          34.042149
+        ]
+      },
+      "properties": {
+        "id": "hospital_018",
+        "name": "Joshua House Health Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 9211554934,
+        "emergency": "no",
+        "phone": "+1-213-893-1960",
+        "website": null,
+        "address": "325 East 7th Street Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.273426,
+          33.988663
+        ]
+      },
+      "properties": {
+        "id": "hospital_019",
+        "name": "Hubert H. Humphrey Comprehensive Health Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 9438017617,
+        "emergency": null,
+        "phone": null,
+        "website": "https://dhs.lacounty.gov/humphrey/",
+        "address": "5850 South Main Street"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.444429,
+          34.327488
+        ]
+      },
+      "properties": {
+        "id": "hospital_020",
+        "name": "Olive House Crisis Residential",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10597504460,
+        "emergency": "no",
+        "phone": null,
+        "website": null,
+        "address": "14149 Bucher Avenue Sylmar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.444293,
+          34.327991
+        ]
+      },
+      "properties": {
+        "id": "hospital_021",
+        "name": "STARS Crisis Residential",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10597504461,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": "14129 Bucher Avenue Sylmar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.866432,
+          34.100002
+        ]
+      },
+      "properties": {
+        "id": "hospital_022",
+        "name": "Aurora Charter Oak",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866240304,
+        "emergency": null,
+        "phone": "+1 626 966 1632",
+        "website": "https://www.charteroakhospital.com",
+        "address": "1161 East Covina Boulevard Covina"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.35611,
+          33.82424
+        ]
+      },
+      "properties": {
+        "id": "hospital_023",
+        "name": "Star View Adolescent - PHF",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866365486,
+        "emergency": null,
+        "phone": null,
+        "website": "https://www.starsinc.com/star-view-community-services/star-view-adolescent-center",
+        "address": "4025 West 226 Street Torrance"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.447491,
+          34.176901
+        ]
+      },
+      "properties": {
+        "id": "hospital_024",
+        "name": "Van Nuys Behavioral Health Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866397638,
+        "emergency": null,
+        "phone": "+1 818 787 1511",
+        "website": "https://www.sch-vannuys.com",
+        "address": "14433 Emelita Street Van Nuys"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.129732,
+          33.874314
+        ]
+      },
+      "properties": {
+        "id": "hospital_025",
+        "name": "Bellflower Behavioral Health Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866444268,
+        "emergency": null,
+        "phone": "+1 562 925 8355",
+        "website": "https://www.lach-bellflower.com",
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.378451,
+          33.990131
+        ]
+      },
+      "properties": {
+        "id": "hospital_026",
+        "name": "Kindred Hospital - Los Angeles",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866445651,
+        "emergency": null,
+        "phone": "+1 310 981 0601",
+        "website": "https://www.kindredhospitals.com/locations/ltac/kindred-hospital-los-angeles",
+        "address": "5525 West Slauson Avenue Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.243402,
+          34.066897
+        ]
+      },
+      "properties": {
+        "id": "hospital_027",
+        "name": "Kaiser Foundation Hospital Mental Health Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866447068,
+        "emergency": null,
+        "phone": "+1 213 580 7200",
+        "website": "https://healthy.kaiserpermanente.org/southern-california/facilities/mental-health-center-100121",
+        "address": "765 West College Street Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.105688,
+          34.069566
+        ]
+      },
+      "properties": {
+        "id": "hospital_028",
+        "name": "L.A. Downtown Medical Center - Ingleside Campus",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866448571,
+        "emergency": null,
+        "phone": "+1 626 288 1160",
+        "website": "https://ladowntownmc.com",
+        "address": "7500 Hellman Avenue Rosemead"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.539856,
+          34.179446
+        ]
+      },
+      "properties": {
+        "id": "hospital_029",
+        "name": "Tarzana Treatment Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866448572,
+        "emergency": null,
+        "phone": "+1 818 654 3815",
+        "website": "https://www.tarzanatc.org/location-detail/tarzana/18646-oxnard-street",
+        "address": "18646 Oxnard Street Tarzana"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.07402,
+          34.088436
+        ]
+      },
+      "properties": {
+        "id": "hospital_030",
+        "name": "BHC Alhambra Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866464472,
+        "emergency": null,
+        "phone": "+1 626 286 1191",
+        "website": "https://www.bhcalhambra.com",
+        "address": "4619 Rosemead Boulevard Rosemead"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.636636,
+          34.157978
+        ]
+      },
+      "properties": {
+        "id": "hospital_031",
+        "name": "Motion Picture And Television Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866465076,
+        "emergency": null,
+        "phone": "+1 818 876 1043",
+        "website": "https://mptf.com",
+        "address": "23388 Mulholland Drive Woodland Hills"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.352044,
+          33.911729
+        ]
+      },
+      "properties": {
+        "id": "hospital_032",
+        "name": "College Medical Center Hawthorne Campus",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866467674,
+        "emergency": null,
+        "phone": "+1 424 365 3000",
+        "website": "https://www.collegemedicalcenter.com",
+        "address": "13300 Hawthorne Boulevard Hawthorne"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.995256,
+          33.763533
+        ]
+      },
+      "properties": {
+        "id": "hospital_033",
+        "name": "Kindred Hospital Westminster",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10866488570,
+        "emergency": null,
+        "phone": "+1 714 893 4541",
+        "website": "https://www.kindredhospitals.com/locations/ltac/kindred-hospital-westminster",
+        "address": "200 Hospital Circle Westminster"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.972411,
+          34.014075
+        ]
+      },
+      "properties": {
+        "id": "hospital_034",
+        "name": "SoCal K9 Clinic City of Industry",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 10935552370,
+        "emergency": "yes",
+        "phone": "+1-562-203-1644",
+        "website": "https://socalk9cliniccoi.com",
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.386306,
+          34.076966
+        ]
+      },
+      "properties": {
+        "id": "hospital_035",
+        "name": "Cedars Sinai Transplant Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 11014639805,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": "8900 Beverly Boulevard"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.701072,
+          34.140346
+        ]
+      },
+      "properties": {
+        "id": "hospital_036",
+        "name": "Balance Treatment Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 11403065224,
+        "emergency": null,
+        "phone": "+1-855-908-0883",
+        "website": "https://www.balancetreatment.com/calabasas-treatment-center-photos/",
+        "address": "4505 Las Virgenes Road Calabasas"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.458398,
+          34.15277
+        ]
+      },
+      "properties": {
+        "id": "hospital_037",
+        "name": "Seeking Integrity",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 12229143092,
+        "emergency": "no",
+        "phone": "+1-747-234-4325",
+        "website": "https://seekingintegrity.com/",
+        "address": "14925 Ventura Blvd Sherman Oaks"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.405442,
+          34.083283
+        ]
+      },
+      "properties": {
+        "id": "hospital_038",
+        "name": "Bridges to Recovery",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 12378876558,
+        "emergency": null,
+        "phone": "+1-855-340-9716",
+        "website": "https://www.bridgestorecovery.com/",
+        "address": "725 Foothill Rd Beverly Hills"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.225692,
+          33.982895
+        ]
+      },
+      "properties": {
+        "id": "hospital_039",
+        "name": "New Horizon Hydration",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 12545765303,
+        "emergency": "no",
+        "phone": null,
+        "website": "https://newhorizonhydration.com/",
+        "address": "6316 1/2Pacific Blvdz Pacific Boulevard Huntington Park"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.807211,
+          33.708196
+        ]
+      },
+      "properties": {
+        "id": "hospital_040",
+        "name": "Veterinary Surgical Specialists",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 12598684061,
+        "emergency": null,
+        "phone": "+1 949-936-0055",
+        "website": "https://www.vssoc.com/",
+        "address": "2937 Edinger Avenue Tustin"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.338904,
+          34.150402
+        ]
+      },
+      "properties": {
+        "id": "hospital_041",
+        "name": "Hospital 41",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 12846826238,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.55306,
+          34.200682
+        ]
+      },
+      "properties": {
+        "id": "hospital_042",
+        "name": "Joyce Eisenberg-Keeper Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 12874692038,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.347554,
+          34.152451
+        ]
+      },
+      "properties": {
+        "id": "hospital_043",
+        "name": "UCLA Health Burbank Laboratory",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 13300106501,
+        "emergency": null,
+        "phone": "+1 310 267 2680",
+        "website": null,
+        "address": "4323 Riverside Drive"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.213694,
+          34.05919
+        ]
+      },
+      "properties": {
+        "id": "hospital_044",
+        "name": "Keck Medicine of USC",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 13469512069,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.439447,
+          33.982055
+        ]
+      },
+      "properties": {
+        "id": "hospital_045",
+        "name": "Marina Del Rey Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 26821226,
+        "emergency": "yes",
+        "phone": "+1 310 823 8911",
+        "website": "https://www.marinahospital.com/",
+        "address": "4650 Lincoln Boulevard Marina Del Rey"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.934843,
+          33.714465
+        ]
+      },
+      "properties": {
+        "id": "hospital_046",
+        "name": "Fountain Valley Regional Hospital and Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 28663398,
+        "emergency": "yes",
+        "phone": "+1-714-966-7200",
+        "website": "https://www.fountainvalleyhospital.com/",
+        "address": "17100 Euclid Street Fountain Valley"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.042112,
+          34.13415
+        ]
+      },
+      "properties": {
+        "id": "hospital_047",
+        "name": "USC Arcadia Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 30134999,
+        "emergency": "yes",
+        "phone": "+1 626 898 8000",
+        "website": "https://www.uscarcadiahospital.org/",
+        "address": "300 West Huntington Drive Arcadia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.985847,
+          34.065128
+        ]
+      },
+      "properties": {
+        "id": "hospital_048",
+        "name": "Kaiser Permanente Baldwin Park Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 44499761,
+        "emergency": "yes",
+        "phone": "+1 626 851 1011",
+        "website": "https://thrive.kaiserpermanente.org/care-near-you/southern-california/baldwin-park/locations/baldwin-park-medical-center/",
+        "address": "1011 Baldwin Park Boulevard Baldwin Park"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.294756,
+          33.829809
+        ]
+      },
+      "properties": {
+        "id": "hospital_049",
+        "name": "Harbor-UCLA Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 49836233,
+        "emergency": "yes",
+        "phone": "+1 310 222 2345",
+        "website": "https://www.harbor-ucla.org/",
+        "address": "1000 Carson Street Torrance"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.844489,
+          33.852562
+        ]
+      },
+      "properties": {
+        "id": "hospital_050",
+        "name": "Kaiser Permanente Orange County \u2013 Anaheim Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 54138599,
+        "emergency": "yes",
+        "phone": "+1-833-574-2273",
+        "website": "https://healthy.kaiserpermanente.org/southern-california/facilities/Orange-County-Anaheim-Medical-Center-100173",
+        "address": "3440 East La Palma Avenue Anaheim"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.144674,
+          33.788907
+        ]
+      },
+      "properties": {
+        "id": "hospital_051",
+        "name": "Community Medical Center Long Beach",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 56123369,
+        "emergency": "yes",
+        "phone": "+1 562 933 9000",
+        "website": "https://www.memorialcare.org/community-medical-center-long-beach",
+        "address": "1720 Termino Avenue Long Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.105916,
+          34.100975
+        ]
+      },
+      "properties": {
+        "id": "hospital_052",
+        "name": "San Gabriel Valley Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 59546380,
+        "emergency": "yes",
+        "phone": "+1 626-289-5454",
+        "website": "https://www.ahmchealth.com/sgvmc/",
+        "address": "438 West Las Tunas Drive San Gabriel"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.685015,
+          34.025522
+        ]
+      },
+      "properties": {
+        "id": "hospital_053",
+        "name": "Chino Valley Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 97942027,
+        "emergency": "yes",
+        "phone": "+1 909 464 8600",
+        "website": "https://www.cvmc.com/",
+        "address": "5451 Walnut Avenue Chino"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.894016,
+          33.934477
+        ]
+      },
+      "properties": {
+        "id": "hospital_054",
+        "name": "Kindred Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 120759701,
+        "emergency": "no",
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.58979,
+          34.170927
+        ]
+      },
+      "properties": {
+        "id": "hospital_055",
+        "name": "Kaiser Permanente Woodland Hills Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 137885931,
+        "emergency": "yes",
+        "phone": "+1 818 719 2000",
+        "website": "https://thrive.kaiserpermanente.org/care-near-you/southern-california/woodland-hills/locations/woodland-hills-medical-center/",
+        "address": "5601 De Soto Avenue Woodland Hills"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.203187,
+          33.929978
+        ]
+      },
+      "properties": {
+        "id": "hospital_056",
+        "name": "St. Francis Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 160184291,
+        "emergency": "yes",
+        "phone": "+1-310-900-8900",
+        "website": "https://stfrancismedicalcenter.com/",
+        "address": "3630 East Imperial Highway Lynwood"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.88765,
+          33.787345
+        ]
+      },
+      "properties": {
+        "id": "hospital_057",
+        "name": "UCI Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 170963630,
+        "emergency": "yes",
+        "phone": "+1 714 456 7890",
+        "website": "http://www.ucirvinehealth.org/",
+        "address": "101 The City Drive South Orange"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.459524,
+          34.280484
+        ]
+      },
+      "properties": {
+        "id": "hospital_058",
+        "name": "Providence Holy Cross Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 172229836,
+        "emergency": "yes",
+        "phone": "+1 818 365 8051",
+        "website": "https://california.providence.org/holy-cross/",
+        "address": "15031 Rinaldi Street Mission Hills"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.209667,
+          34.059376
+        ]
+      },
+      "properties": {
+        "id": "hospital_059",
+        "name": "Los Angeles General Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 172998715,
+        "emergency": "yes",
+        "phone": "+1 323 409 1000",
+        "website": "https://dhs.lacounty.gov/lageneral/",
+        "address": "2051 Marengo Street Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.152241,
+          34.133654
+        ]
+      },
+      "properties": {
+        "id": "hospital_060",
+        "name": "Huntington Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 181582600,
+        "emergency": "yes",
+        "phone": "+1-626-397-5000",
+        "website": "https://www.huntingtonhealth.org/",
+        "address": "100 West California Boulevard Pasadena"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.486361,
+          34.027092
+        ]
+      },
+      "properties": {
+        "id": "hospital_061",
+        "name": "UCLA Medical Center - Santa Monica",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 185919917,
+        "emergency": "yes",
+        "phone": "+1 424 259 6000",
+        "website": "https://www.uclahealth.org/santa-monica/",
+        "address": "1250 16th Street Santa Monica"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.242694,
+          33.923324
+        ]
+      },
+      "properties": {
+        "id": "hospital_062",
+        "name": "Martin Luther King, Jr. Community Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 185933411,
+        "emergency": "yes",
+        "phone": "+1 424 338 8000",
+        "website": "https://www.mlkcommunityhospital.org/",
+        "address": "1680 East 120th Street Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.956317,
+          33.700503
+        ]
+      },
+      "properties": {
+        "id": "hospital_063",
+        "name": "Orange Coast Memorial Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 190539243,
+        "emergency": "yes",
+        "phone": "+1 714 378 7000",
+        "website": "https://www.memorialcare.org/orange-coast-medical-center",
+        "address": "18111 Brookhurst Street Fountain Valley"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.894053,
+          33.934936
+        ]
+      },
+      "properties": {
+        "id": "hospital_064",
+        "name": "Kindred Hospital - Brea",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 190556865,
+        "emergency": "no",
+        "phone": "+1 714 529 6842",
+        "website": "https://www.kindredhealthcare.com/locations/transitional-care-hospitals/kindred-hospital-brea",
+        "address": "875 North Brea Boulevard Brea"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.912874,
+          33.775383
+        ]
+      },
+      "properties": {
+        "id": "hospital_065",
+        "name": "Garden Grove Hospital And Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 190984998,
+        "emergency": "yes",
+        "phone": "+1 714 537 5160",
+        "website": "https://www.gardengrovehospital.com/",
+        "address": "12601 Garden Grove Boulevard Garden Grove"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.21724,
+          34.049682
+        ]
+      },
+      "properties": {
+        "id": "hospital_066",
+        "name": "White Memorial Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 203432884,
+        "emergency": "yes",
+        "phone": "+1 323 268 5000",
+        "website": "https://www.adventisthealth.org/white-memorial/",
+        "address": "1720 East Cesar E Chavez Avenue Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.826807,
+          33.789025
+        ]
+      },
+      "properties": {
+        "id": "hospital_067",
+        "name": "Chapman Global Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 203833044,
+        "emergency": "yes",
+        "phone": "+1 714 633 0011",
+        "website": "https://chapman-gmc.com/",
+        "address": "2601 East Chapman Avenue Orange"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.934587,
+          33.848211
+        ]
+      },
+      "properties": {
+        "id": "hospital_068",
+        "name": "Anaheim Regional Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 237072249,
+        "emergency": "yes",
+        "phone": "+1 714 774 1450",
+        "website": "https://www.anaheimregionalmc.com/",
+        "address": "1111 West La Palma Avenue Anaheim"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.157871,
+          33.929181
+        ]
+      },
+      "properties": {
+        "id": "hospital_069",
+        "name": "Rancho Los Amigos National Rehabilitation Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 241725421,
+        "emergency": "no",
+        "phone": "+1-877-726-2461",
+        "website": "https://dhs.lacounty.gov/rancho/",
+        "address": "7801 East Imperial Highway Downey"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.161468,
+          33.922219
+        ]
+      },
+      "properties": {
+        "id": "hospital_070",
+        "name": "Rancho Los Amigos South Campus",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 241725422,
+        "emergency": "no",
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.294756,
+          33.78866
+        ]
+      },
+      "properties": {
+        "id": "hospital_071",
+        "name": "Kaiser Permanente South Bay Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 259787702,
+        "emergency": "yes",
+        "phone": "+1 310 325 5111",
+        "website": "https://thrive.kaiserpermanente.org/care-near-you/southern-california/south-bay/locations/",
+        "address": "25825 South Vermont Avenue Harbor City"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.165945,
+          34.196202
+        ]
+      },
+      "properties": {
+        "id": "hospital_072",
+        "name": "Hathaway-Sycamores",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 272245253,
+        "emergency": "no",
+        "phone": null,
+        "website": "http://www.hathaway-sycamores.org",
+        "address": "2933 El Nido Drive Altadena"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.043417,
+          34.047986
+        ]
+      },
+      "properties": {
+        "id": "hospital_073",
+        "name": "Greater El Monte Community Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 285340183,
+        "emergency": "yes",
+        "phone": "+1 626 579 7777",
+        "website": "https://www.greaterelmonte.com/",
+        "address": "1701 Santa Anita Avenue South El Monte"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.356903,
+          33.839098
+        ]
+      },
+      "properties": {
+        "id": "hospital_074",
+        "name": "Providence Little Company of Mary Medical Center Torrance",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 285842342,
+        "emergency": "yes",
+        "phone": "+1 310 540 7676",
+        "website": "https://california.providence.org/torrance/",
+        "address": "4101 Torrance Boulevard Torrance"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.290091,
+          34.096317
+        ]
+      },
+      "properties": {
+        "id": "hospital_075",
+        "name": "CHA Hollywood Presbyterian Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 299402562,
+        "emergency": "yes",
+        "phone": "+1 213 413 3000",
+        "website": "https://www.hollywoodpresbyterian.com/",
+        "address": "1300 North Vermont Avenue Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.290081,
+          34.097366
+        ]
+      },
+      "properties": {
+        "id": "hospital_076",
+        "name": "Children's Hospital Los Angeles",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 299402563,
+        "emergency": "yes",
+        "phone": "+1 323 660 2450",
+        "website": "https://www.chla.org/",
+        "address": "4650 Sunset Boulevard Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.987369,
+          33.703873
+        ]
+      },
+      "properties": {
+        "id": "hospital_077",
+        "name": "Huntington Beach Hospital And Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 319346388,
+        "emergency": "yes",
+        "phone": "+1 714 843 5000",
+        "website": "https://www.hbhospital.org/",
+        "address": "17772 Beach Boulevard Huntington Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.100908,
+          34.015135
+        ]
+      },
+      "properties": {
+        "id": "hospital_078",
+        "name": "Beverly Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 319902860,
+        "emergency": "yes",
+        "phone": "+1 323 726 1222",
+        "website": "https://www.beverly.org/",
+        "address": "309 West Beverly Boulevard Montebello"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.130605,
+          33.935059
+        ]
+      },
+      "properties": {
+        "id": "hospital_079",
+        "name": "PIH Health Hospital - Downey",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 351686198,
+        "emergency": "yes",
+        "phone": "+1-562-904-5000",
+        "website": "https://www.pihhealth.org/locations/locations-profile/?id=489",
+        "address": "11500 Brookshire Avenue Downey"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.995137,
+          33.825721
+        ]
+      },
+      "properties": {
+        "id": "hospital_080",
+        "name": "West Anaheim Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 374374613,
+        "emergency": "yes",
+        "phone": "+1 714 827 3000",
+        "website": "https://www.westanaheimmedctr.com/",
+        "address": "3033 West Orange Avenue Anaheim"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.628912,
+          34.202665
+        ]
+      },
+      "properties": {
+        "id": "hospital_081",
+        "name": "UCLA West Hills Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 380825423,
+        "emergency": "yes",
+        "phone": "+1 818 676 4000",
+        "website": "https://www.uclahealth.org/hospitals/west-valley",
+        "address": "7300 Medical Center Drive West Hills"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.972554,
+          34.12917
+        ]
+      },
+      "properties": {
+        "id": "hospital_082",
+        "name": "Helford Clinical Research Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 381382888,
+        "emergency": "no",
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.265368,
+          34.054117
+        ]
+      },
+      "properties": {
+        "id": "hospital_083",
+        "name": "Good Samaritan Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 398272919,
+        "emergency": "yes",
+        "phone": "+1 213 977 2121",
+        "website": "https://www.goodsam.org/",
+        "address": "1225 Wilshire Boulevard Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.456561,
+          34.220563
+        ]
+      },
+      "properties": {
+        "id": "hospital_084",
+        "name": "Mission Community Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 418123317,
+        "emergency": "yes",
+        "phone": "+1 818 787 2222",
+        "website": "https://www.mchonline.org/",
+        "address": "14850 Roscoe Boulevard Panorama City"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.443852,
+          34.064963
+        ]
+      },
+      "properties": {
+        "id": "hospital_085",
+        "name": "Jules Stein Eye Institute",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 422876579,
+        "emergency": "no",
+        "phone": null,
+        "website": "https://www.uclahealth.org/eye/",
+        "address": "100 Stein Plaza"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.265108,
+          34.036737
+        ]
+      },
+      "properties": {
+        "id": "hospital_086",
+        "name": "USC-Eisner Family Medicine Center at California Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 428383276,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": "1400 South Grand Avenue Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.205122,
+          34.061431
+        ]
+      },
+      "properties": {
+        "id": "hospital_087",
+        "name": "Norris Cancer Center and Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 428955320,
+        "emergency": "no",
+        "phone": null,
+        "website": "https://uscnorriscancer.usc.edu/",
+        "address": "1441 Eastlake Avenue Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.828517,
+          33.730266
+        ]
+      },
+      "properties": {
+        "id": "hospital_088",
+        "name": "Foothill Regional Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 442006645,
+        "emergency": "yes",
+        "phone": "+1 714 619 7700",
+        "website": "https://www.foothillregionalmedicalcenter.com/",
+        "address": "14662 Newport Avenue Tustin"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.295094,
+          34.098594
+        ]
+      },
+      "properties": {
+        "id": "hospital_089",
+        "name": "Kaiser Permanente Los Angeles Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 442117665,
+        "emergency": "yes",
+        "phone": "+1 323 783 4011",
+        "website": "https://thrive.kaiserpermanente.org/care-near-you/southern-california/los-angeles/locations/los-angeles-medical-center/",
+        "address": "4867 Sunset Boulevard Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.170944,
+          33.898923
+        ]
+      },
+      "properties": {
+        "id": "hospital_090",
+        "name": "Hospital 90",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 454968974,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.223879,
+          33.989714
+        ]
+      },
+      "properties": {
+        "id": "hospital_091",
+        "name": "Community Hospital of Huntington Park",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 464183836,
+        "emergency": "yes",
+        "phone": "+1 323 583 1931",
+        "website": "https://chhp.avantihospitals.com/",
+        "address": "2623 East Slauson Avenue Huntington Park"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.121705,
+          34.097176
+        ]
+      },
+      "properties": {
+        "id": "hospital_092",
+        "name": "AHMC Healthcare",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 471613246,
+        "emergency": null,
+        "phone": "+1 626-457-7400",
+        "website": "https://www.ahmchealth.com/",
+        "address": "500 East Main Street Alhambra"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.380696,
+          34.075215
+        ]
+      },
+      "properties": {
+        "id": "hospital_093",
+        "name": "Cedars-Sinai Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 534711293,
+        "emergency": "yes",
+        "phone": "+1 310 423 3277",
+        "website": "https://www.cedars-sinai.org/",
+        "address": "8700 Beverly Boulevard Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.328548,
+          34.156068
+        ]
+      },
+      "properties": {
+        "id": "hospital_094",
+        "name": "Providence Saint Joseph Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 534717712,
+        "emergency": "yes",
+        "phone": "+1 818 843 5111",
+        "website": "https://california.providence.org/saint-joseph/",
+        "address": "501 South Buena Vista Street Burbank"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.688059,
+          34.009193
+        ]
+      },
+      "properties": {
+        "id": "hospital_095",
+        "name": "Canyon Ridge Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 570752098,
+        "emergency": "no",
+        "phone": "+1 909 590 3700",
+        "website": "https://canyonridgehospital.com/",
+        "address": "5353 G Street Chino"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.695903,
+          34.078627
+        ]
+      },
+      "properties": {
+        "id": "hospital_096",
+        "name": "Montclair Hospital Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 570810425,
+        "emergency": "yes",
+        "phone": "+1 909 625 5411",
+        "website": "https://www.montclair-hospital.org/",
+        "address": "5000 San Bernardino Street Montclair"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.746707,
+          34.097556
+        ]
+      },
+      "properties": {
+        "id": "hospital_097",
+        "name": "Casa Colina",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 570811088,
+        "emergency": "no",
+        "phone": "+1 866 724 4127",
+        "website": "https://www.casacolina.org/",
+        "address": "255 East Bonita Avenue Pomona"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.750594,
+          34.077612
+        ]
+      },
+      "properties": {
+        "id": "hospital_098",
+        "name": "Pomona Valley Hospital Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 570811848,
+        "emergency": "yes",
+        "phone": "+1 909 865 9500",
+        "website": "https://www.pvhmc.org/",
+        "address": "1798 North Garey Avenue Pomona"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.871455,
+          34.133053
+        ]
+      },
+      "properties": {
+        "id": "hospital_099",
+        "name": "Foothill Presbyterian Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 570816611,
+        "emergency": "yes",
+        "phone": "+1 626 963 8411",
+        "website": "https://www.cvhp.org/Our_Facilities/Foothill_Presbyterian.aspx",
+        "address": "250 South Grand Avenue Glendora"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.834389,
+          34.097494
+        ]
+      },
+      "properties": {
+        "id": "hospital_100",
+        "name": "San Dimas Community Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 570817838,
+        "emergency": "yes",
+        "phone": "+1 909 599 6811",
+        "website": "https://www.sandimashospital.com/",
+        "address": "1350 West Covina Boulevard San Dimas"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.884372,
+          33.711205
+        ]
+      },
+      "properties": {
+        "id": "hospital_101",
+        "name": "South Coast Global Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571018512,
+        "emergency": "yes",
+        "phone": "+1 714 754 5454",
+        "website": "https://southcoast-gmc.com/",
+        "address": "2701 South Bristol Street Santa Ana"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.832924,
+          33.754419
+        ]
+      },
+      "properties": {
+        "id": "hospital_102",
+        "name": "Orange County Global Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571022773,
+        "emergency": "yes",
+        "phone": "+1 714 953 3500",
+        "website": "https://orangecounty-gmc.com/",
+        "address": "1001 North Tustin Avenue Santa Ana"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.891511,
+          33.762287
+        ]
+      },
+      "properties": {
+        "id": "hospital_103",
+        "name": "Kindred Hospital - Santa Ana",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571031162,
+        "emergency": "no",
+        "phone": "+1 714 564 7800",
+        "website": "https://www.kindredhealthcare.com/locations/transitional-care-hospitals/kindred-hospital-santa-ana",
+        "address": "1901 College Avenue Santa Ana"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.86609,
+          33.781037
+        ]
+      },
+      "properties": {
+        "id": "hospital_104",
+        "name": "Children's Hospital of Orange County",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571039716,
+        "emergency": "yes",
+        "phone": "+1-714-997-3000",
+        "website": "https://www.choc.org/",
+        "address": "1201 West la Veta Avenue Orange"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.864335,
+          33.782197
+        ]
+      },
+      "properties": {
+        "id": "hospital_105",
+        "name": "Saint Joseph Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571039717,
+        "emergency": "yes",
+        "phone": "+1-714-633-9111",
+        "website": "https://www.sjo.org/",
+        "address": "1100 West Stewart Drive Orange"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.843109,
+          33.886661
+        ]
+      },
+      "properties": {
+        "id": "hospital_106",
+        "name": "Placentia-Linda Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571053792,
+        "emergency": "yes",
+        "phone": "+1 714 993 2000",
+        "website": "https://www.placentialinda.com/",
+        "address": "1301 North Rose Drive Placentia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.927065,
+          33.894686
+        ]
+      },
+      "properties": {
+        "id": "hospital_107",
+        "name": "Saint Jude Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571062802,
+        "emergency": "yes",
+        "phone": "+1 714-871-3280",
+        "website": "https://www.stjudemedicalcenter.org/",
+        "address": "101 East Valencia Mesa Drive Fullerton"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.909741,
+          33.820528
+        ]
+      },
+      "properties": {
+        "id": "hospital_108",
+        "name": "Anaheim Global Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571065301,
+        "emergency": "yes",
+        "phone": "+1 714 533 6220",
+        "website": "https://www.westernmedanaheim.com/",
+        "address": "1025 South Anaheim Boulevard Anaheim"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.038833,
+          33.847496
+        ]
+      },
+      "properties": {
+        "id": "hospital_109",
+        "name": "La Palma Intercommunity Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571086105,
+        "emergency": "yes",
+        "phone": "+1 714 670 7400",
+        "website": "https://www.lapalmaintercommunityhospital.com/",
+        "address": "7901 Walker Street La Palma"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.458576,
+          34.05705
+        ]
+      },
+      "properties": {
+        "id": "hospital_110",
+        "name": "West Los Angeles Veterans Affairs Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571142033,
+        "emergency": "yes",
+        "phone": "+1 310 478 3711",
+        "website": "https://www.losangeles.va.gov/",
+        "address": "11310 Wilshire Boulevard Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.187183,
+          33.779979
+        ]
+      },
+      "properties": {
+        "id": "hospital_111",
+        "name": "Saint Mary Medical Center Long Beach",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571350168,
+        "emergency": "yes",
+        "phone": "+1 562 491 9000",
+        "website": "https://www.dignityhealth.org/socal/locations/stmarymedical",
+        "address": "1050 Linden Avenue Long Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.194425,
+          33.788554
+        ]
+      },
+      "properties": {
+        "id": "hospital_112",
+        "name": "College Medical Center South Campus",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571356353,
+        "emergency": "no",
+        "phone": "+1 562 256 8400",
+        "website": "https://www.collegemedicalcenter.com/south-campus/",
+        "address": "1725 Pacific Avenue Long Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.193064,
+          33.807113
+        ]
+      },
+      "properties": {
+        "id": "hospital_113",
+        "name": "College Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571365380,
+        "emergency": "yes",
+        "phone": "+1 562 997 2000",
+        "website": "https://www.collegemedicalcenter.com/",
+        "address": "2776 Pacific Avenue Long Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.187221,
+          33.808892
+        ]
+      },
+      "properties": {
+        "id": "hospital_114",
+        "name": "Long Beach Memorial Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571388052,
+        "emergency": "yes",
+        "phone": "+1 562 933 2000",
+        "website": "https://www.memorialcare.org/long-beach-medical-center",
+        "address": "2801 Atlantic Avenue Long Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.305487,
+          33.739336
+        ]
+      },
+      "properties": {
+        "id": "hospital_115",
+        "name": "Providence Little Company of Mary Medical Center San Pedro",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571394496,
+        "emergency": "yes",
+        "phone": "+1 310 832 3311",
+        "website": "https://california.providence.org/san-pedro/",
+        "address": "1300 West 7th Street San Pedro"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.343725,
+          33.810446
+        ]
+      },
+      "properties": {
+        "id": "hospital_116",
+        "name": "Torrance Memorial",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571401800,
+        "emergency": "yes",
+        "phone": "+1 310 325 9110",
+        "website": "https://www.torrancememorial.org/",
+        "address": "3330 Lomita Boulevard Torrance"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.297426,
+          33.890009
+        ]
+      },
+      "properties": {
+        "id": "hospital_117",
+        "name": "Kindred Hospital South Bay",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571436511,
+        "emergency": "no",
+        "phone": "+1 310 323 5330",
+        "website": "https://www.kindredhealthcare.com/locations/transitional-care-hospitals/kindred-hospital-south-bay",
+        "address": "1246 West 155th Street Gardena"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.295056,
+          33.893024
+        ]
+      },
+      "properties": {
+        "id": "hospital_118",
+        "name": "Memorial Hospital of Gardena",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571436512,
+        "emergency": "yes",
+        "phone": "+1 310 532 4200",
+        "website": "https://mhg.avantihospitals.com/",
+        "address": "1145 West Redondo Beach Boulevard Gardena"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.098475,
+          33.912284
+        ]
+      },
+      "properties": {
+        "id": "hospital_119",
+        "name": "Coast Plaza Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571453779,
+        "emergency": "yes",
+        "phone": "+1 562 868 3751",
+        "website": "https://cph.avantihospitals.com/",
+        "address": "13100 Studebaker Road Norwalk"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.063877,
+          33.910391
+        ]
+      },
+      "properties": {
+        "id": "hospital_120",
+        "name": "Los Angeles Community Hospital at Norwalk",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571460037,
+        "emergency": "yes",
+        "phone": "+1 562 863 4763",
+        "website": "https://www.lach-norwalk.com/",
+        "address": "13222 Bloomfield Avenue Norwalk"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.068315,
+          33.924424
+        ]
+      },
+      "properties": {
+        "id": "hospital_121",
+        "name": "Metropolitan State Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571463932,
+        "emergency": "no",
+        "phone": "+1-562-863-7011",
+        "website": "https://www.dsh.ca.gov/Metropolitan/",
+        "address": "11401 Bloomfield Avenue Norwalk"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.049458,
+          33.969917
+        ]
+      },
+      "properties": {
+        "id": "hospital_122",
+        "name": "PIH Health Whittier Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571646691,
+        "emergency": "yes",
+        "phone": "+1 562 698 0811",
+        "website": "https://www.pihhealth.org/",
+        "address": "12401 Washington Boulevard Whittier"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.967741,
+          34.062897
+        ]
+      },
+      "properties": {
+        "id": "hospital_123",
+        "name": "Kindred Hospital Baldwin Park",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571725250,
+        "emergency": "no",
+        "phone": "+1 626 388 2700",
+        "website": "https://www.kindredhealthcare.com/locations/transitional-care-hospitals/kindred-hospital-baldwin-park",
+        "address": "14148 Francisquito Avenue Baldwin Park"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.945455,
+          34.064001
+        ]
+      },
+      "properties": {
+        "id": "hospital_124",
+        "name": "Queen of the Valley Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571729228,
+        "emergency": "yes",
+        "phone": "+1 626 962 4011",
+        "website": "https://www.cvhp.org/Our_Facilities/Queen_of_the_Valley.aspx",
+        "address": "1115 South Sunset Avenue West Covina"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.944795,
+          34.0712
+        ]
+      },
+      "properties": {
+        "id": "hospital_125",
+        "name": "West Covina Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571733424,
+        "emergency": "no",
+        "phone": "+1 626 338 8481",
+        "website": null,
+        "address": "725 South Orange Avenue West Covina"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.917268,
+          34.087264
+        ]
+      },
+      "properties": {
+        "id": "hospital_126",
+        "name": "Kindred Hospital - San Gabriel Valley",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571741432,
+        "emergency": "no",
+        "phone": "+1 626 339 5451",
+        "website": "kindredsangabriel.com",
+        "address": "845 North Lark Ellen Avenue West Covina"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.893424,
+          34.088754
+        ]
+      },
+      "properties": {
+        "id": "hospital_127",
+        "name": "Inter-Community Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571744649,
+        "emergency": "yes",
+        "phone": "+1 626 331 7331",
+        "website": "https://www.cvhp.org/Our_Facilities/Inter_Community.aspx",
+        "address": "210 West San Bernardino Road Covina"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.992588,
+          34.148663
+        ]
+      },
+      "properties": {
+        "id": "hospital_128",
+        "name": "Monrovia Memorial Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571765396,
+        "emergency": "no",
+        "phone": "+1 626 408 9800",
+        "website": "https://monroviamemorial.com/",
+        "address": "323 South Heliotrope Avenue Monrovia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.971808,
+          34.127882
+        ]
+      },
+      "properties": {
+        "id": "hospital_129",
+        "name": "City of Hope",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571802586,
+        "emergency": "no",
+        "phone": "+1 626 256 4673",
+        "website": "https://www.cityofhope.org/",
+        "address": "1500 East Duarte Road Duarte"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.2156,
+          34.204406
+        ]
+      },
+      "properties": {
+        "id": "hospital_130",
+        "name": "USC Verdugo Hills Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571841991,
+        "emergency": "yes",
+        "phone": "+1 818 790 7100",
+        "website": "https://uscvhh.org/",
+        "address": "1812 Verdugo Boulevard Glendale"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.09125,
+          34.140882
+        ]
+      },
+      "properties": {
+        "id": "hospital_131",
+        "name": "Las Encinas Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 571991516,
+        "emergency": "no",
+        "phone": "+1 800 792 2345",
+        "website": "https://www.lasencinashospital.com/",
+        "address": "2900 East Del Mar Boulevard Pasadena"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.144183,
+          34.090164
+        ]
+      },
+      "properties": {
+        "id": "hospital_132",
+        "name": "Alhambra Hospital Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 572047613,
+        "emergency": "yes",
+        "phone": "+1 626-570-1606",
+        "website": "https://www.alhambrahospital.com/",
+        "address": "100 South Raymond Avenue Alhambra"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.123729,
+          34.068533
+        ]
+      },
+      "properties": {
+        "id": "hospital_133",
+        "name": "Garfield Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 572072002,
+        "emergency": "yes",
+        "phone": "+1 626 573 2222",
+        "website": "https://www.garfieldmedicalcenter.com/",
+        "address": "525 North Garfield Avenue Monterey Park"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.138204,
+          34.049936
+        ]
+      },
+      "properties": {
+        "id": "hospital_134",
+        "name": "Monterey Park Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 572083309,
+        "emergency": "yes",
+        "phone": "+1 626-570-9000",
+        "website": "https://www.ahmchealth.com/mph/",
+        "address": "900 South Atlantic Boulevard Monterey Park"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.348305,
+          33.95046
+        ]
+      },
+      "properties": {
+        "id": "hospital_135",
+        "name": "Centinela Hospital Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 572213965,
+        "emergency": "yes",
+        "phone": "+1 310 673 4660",
+        "website": "https://www.centinelamed.com/",
+        "address": "555 East Hardy Street Inglewood"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.397802,
+          34.022928
+        ]
+      },
+      "properties": {
+        "id": "hospital_136",
+        "name": "Southern California Hospital Culver City",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 572362421,
+        "emergency": "yes",
+        "phone": "+1 310 836 7000",
+        "website": "https://sch-culvercity.com/",
+        "address": "3828 Delmas Terrace Culver City"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.479529,
+          34.03054
+        ]
+      },
+      "properties": {
+        "id": "hospital_137",
+        "name": "Providence Saint John's Health Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 572407998,
+        "emergency": "yes",
+        "phone": "+1 310 829 5511",
+        "website": "https://california.providence.org/saint-johns/",
+        "address": "2121 Santa Monica Boulevard Santa Monica"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.360619,
+          34.057353
+        ]
+      },
+      "properties": {
+        "id": "hospital_138",
+        "name": "Olympia Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 574224209,
+        "emergency": "yes",
+        "phone": "+1 310 657 5900",
+        "website": "https://www.olympiamc.com/",
+        "address": "5900 West Olympic Boulevard Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.325322,
+          34.096643
+        ]
+      },
+      "properties": {
+        "id": "hospital_139",
+        "name": "Southern California Hospital Hollywood",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 574228538,
+        "emergency": "no",
+        "phone": "+1 323 462 2271",
+        "website": "https://www.sch-hollywood.com/",
+        "address": "6245 De Longpre Avenue Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.266002,
+          34.037694
+        ]
+      },
+      "properties": {
+        "id": "hospital_140",
+        "name": "California Hospital Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 574464500,
+        "emergency": "yes",
+        "phone": "+1 213 748 2411",
+        "website": "https://www.dignityhealth.org/socal/locations/californiahospital",
+        "address": "1401 South Grand Avenue Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.273428,
+          34.064079
+        ]
+      },
+      "properties": {
+        "id": "hospital_141",
+        "name": "Saint Vincent Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 574480663,
+        "emergency": "yes",
+        "phone": "+1 213 484 7111",
+        "website": "https://stvincent.verity.org/",
+        "address": "2131 West 3rd Street Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.263621,
+          34.069572
+        ]
+      },
+      "properties": {
+        "id": "hospital_142",
+        "name": "Silver Lake Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 574492275,
+        "emergency": "no",
+        "phone": "+1 213 989 6100",
+        "website": "https://www.silverlakemc.com/",
+        "address": "1711 West Temple Street Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.256774,
+          34.08528
+        ]
+      },
+      "properties": {
+        "id": "hospital_143",
+        "name": "Gateways Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 574583421,
+        "emergency": "no",
+        "phone": "+1 323 644 2000",
+        "website": "https://www.gatewayshospital.org/",
+        "address": "1891 Effie Street Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.201955,
+          34.062221
+        ]
+      },
+      "properties": {
+        "id": "hospital_144",
+        "name": "Keck Hospital of USC",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 574903704,
+        "emergency": "no",
+        "phone": "+1 800 872 2273",
+        "website": "https://www.keckmedicine.org/about-keck-medicine/keck-hospital-of-usc/",
+        "address": "1500 San Pablo Street Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.23034,
+          34.151204
+        ]
+      },
+      "properties": {
+        "id": "hospital_145",
+        "name": "Glendale Adventist Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 575564321,
+        "emergency": "yes",
+        "phone": "+1 818 409 8000",
+        "website": "https://www.adventisthealth.org/glendale/",
+        "address": "1509 Wilson Terrace Glendale"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.256659,
+          34.127616
+        ]
+      },
+      "properties": {
+        "id": "hospital_146",
+        "name": "Glendale Memorial Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 575583532,
+        "emergency": "yes",
+        "phone": "+1 818 502 1900",
+        "website": "https://www.dignityhealth.org/socal/locations/glendalememorial",
+        "address": "1420 South Central Avenue Glendale"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.44945,
+          34.16033
+        ]
+      },
+      "properties": {
+        "id": "hospital_147",
+        "name": "Sherman Oaks Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 575653273,
+        "emergency": "yes",
+        "phone": "+1 818 981 7111",
+        "website": "https://www.shermanoakshospital.org/",
+        "address": "4929 Van Nuys Boulevard Sherman Oaks"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.486874,
+          34.157499
+        ]
+      },
+      "properties": {
+        "id": "hospital_148",
+        "name": "Encino Hospital Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 575662823,
+        "emergency": "yes",
+        "phone": "+1 818 995 5000",
+        "website": "https://www.encinomed.org/",
+        "address": "16237 Ventura Boulevard Encino"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.532866,
+          34.170889
+        ]
+      },
+      "properties": {
+        "id": "hospital_149",
+        "name": "Providence Tarzana Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 575679961,
+        "emergency": "yes",
+        "phone": "+1 818 881 0800",
+        "website": "https://california.providence.org/tarzana/",
+        "address": "18321 Clark Street Tarzana"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.533878,
+          34.219967
+        ]
+      },
+      "properties": {
+        "id": "hospital_150",
+        "name": "Northridge Hospital Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 575744232,
+        "emergency": "yes",
+        "phone": "+1 818 885 8500",
+        "website": "https://www.dignityhealth.org/socal/locations/northridgehospital",
+        "address": "18300 Roscoe Boulevard Northridge"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.463974,
+          34.194853
+        ]
+      },
+      "properties": {
+        "id": "hospital_151",
+        "name": "Valley Presbyterian Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 575745853,
+        "emergency": "yes",
+        "phone": "+1 818 782 6600",
+        "website": "https://www.valleypres.org/",
+        "address": "15107 Vanowen Street Van Nuys"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.430702,
+          34.218493
+        ]
+      },
+      "properties": {
+        "id": "hospital_152",
+        "name": "Kaiser Permanente Panorama City Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 575925131,
+        "emergency": "yes",
+        "phone": "+1 818 375 2000",
+        "website": "https://thrive.kaiserpermanente.org/care-near-you/southern-california/panorama-city/locations/panorama-city-medical-center/",
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.396469,
+          34.240198
+        ]
+      },
+      "properties": {
+        "id": "hospital_153",
+        "name": "Pacifica Hospital of the Valley",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 575947591,
+        "emergency": "yes",
+        "phone": "+1 818 767 3310",
+        "website": "https://pacificahospital.com/",
+        "address": "9449 San Fernando Road Sun Valley"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.746118,
+          34.288963
+        ]
+      },
+      "properties": {
+        "id": "hospital_154",
+        "name": "Adventist Health Simi Valley",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 576068018,
+        "emergency": "yes",
+        "phone": "+1 805 955 6000",
+        "website": "https://www.adventisthealth.org/Simi-Valley/",
+        "address": "2975 Sycamore Drive Simi Valley"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.883361,
+          34.207691
+        ]
+      },
+      "properties": {
+        "id": "hospital_155",
+        "name": "Los Robles Hospital & Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 576092818,
+        "emergency": "yes",
+        "phone": "+1 805 497 2727",
+        "website": "https://losrobleshospital.com/",
+        "address": "215 West Janns Road Thousand Oaks"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.067144,
+          33.804046
+        ]
+      },
+      "properties": {
+        "id": "hospital_156",
+        "name": "Los Alamitos Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 586931790,
+        "emergency": "yes",
+        "phone": "+1 562 598 1311",
+        "website": "https://www.losalamitosmedctr.com/",
+        "address": "3751 Katella Avenue Los Alamitos"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.1493,
+          33.859699
+        ]
+      },
+      "properties": {
+        "id": "hospital_157",
+        "name": "Lakewood Regional Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 586952902,
+        "emergency": "yes",
+        "phone": "+1 562 531 2550",
+        "website": "https://www.lakewoodregional.com/",
+        "address": "3650 East South Street Lakewood"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.128068,
+          33.919245
+        ]
+      },
+      "properties": {
+        "id": "hospital_158",
+        "name": "Kaiser Permanente Downey Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 586969342,
+        "emergency": "yes",
+        "phone": "+1-562-657-9000",
+        "website": "https://thrive.kaiserpermanente.org/care-near-you/southern-california/downey/locations/downey-medical-center/",
+        "address": "9333 East Imperial Highway Downey"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.86527,
+          34.127713
+        ]
+      },
+      "properties": {
+        "id": "hospital_159",
+        "name": "Glendora Community Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 587007267,
+        "emergency": "yes",
+        "phone": "+1 626 852 5000",
+        "website": "https://www.glendorahospital.com/",
+        "address": "150 West Route 66 Glendora"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.834961,
+          33.783039
+        ]
+      },
+      "properties": {
+        "id": "hospital_160",
+        "name": "Nexus Children's Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 587040903,
+        "emergency": "no",
+        "phone": "+1 714 289 2400",
+        "website": "https://www.nhsltd.com/",
+        "address": "393 South Tustin Street Orange"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.003932,
+          33.950154
+        ]
+      },
+      "properties": {
+        "id": "hospital_161",
+        "name": "Whitter Hospital Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 587057728,
+        "emergency": "yes",
+        "phone": "+1 562 945 3561",
+        "website": "https://www.whittierhospital.com/",
+        "address": "9080 Colima Road Whittier"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.374797,
+          34.038712
+        ]
+      },
+      "properties": {
+        "id": "hospital_162",
+        "name": "Kaiser Permanente West Los Angeles Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 587065742,
+        "emergency": "yes",
+        "phone": "+1 800 954 8000",
+        "website": "https://thrive.kaiserpermanente.org/care-near-you/southern-california/west-los-angeles/locations/west-los-angeles-medical-center/",
+        "address": "6041 Cadillac Avenue Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.184372,
+          34.023341
+        ]
+      },
+      "properties": {
+        "id": "hospital_163",
+        "name": "East Los Angeles Doctors Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 587066427,
+        "emergency": "yes",
+        "phone": "+1 323 268 5514",
+        "website": "https://eladh.avantihospitals.com/",
+        "address": "4060 Whittier Boulevard Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.489673,
+          34.023876
+        ]
+      },
+      "properties": {
+        "id": "hospital_164",
+        "name": "Hospital 164",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 635582390,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.118827,
+          33.778491
+        ]
+      },
+      "properties": {
+        "id": "hospital_165",
+        "name": "Tibor Rubin VA Medical Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 665764610,
+        "emergency": "yes",
+        "phone": "+1 562 826 8000",
+        "website": "https://www.longbeach.va.gov/",
+        "address": "5901 East 7th Street Long Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.309816,
+          34.003453
+        ]
+      },
+      "properties": {
+        "id": "hospital_166",
+        "name": "Hospital 166",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 670261658,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.46508,
+          34.19257
+        ]
+      },
+      "properties": {
+        "id": "hospital_167",
+        "name": "Hospital 167",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 803156175,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.465303,
+          34.190576
+        ]
+      },
+      "properties": {
+        "id": "hospital_168",
+        "name": "Hospital 168",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 803156176,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.308127,
+          33.740008
+        ]
+      },
+      "properties": {
+        "id": "hospital_169",
+        "name": "Los Palos Convalescent Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 866162351,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.308132,
+          33.739543
+        ]
+      },
+      "properties": {
+        "id": "hospital_170",
+        "name": "Seacrest Convalescent Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 866162352,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.474286,
+          34.299502
+        ]
+      },
+      "properties": {
+        "id": "hospital_171",
+        "name": "Kaiser Permanente Sylmar Medical Office",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 918098372,
+        "emergency": "no",
+        "phone": null,
+        "website": null,
+        "address": "12669 Encinitas Avenue Sylmar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.247495,
+          34.075347
+        ]
+      },
+      "properties": {
+        "id": "hospital_172",
+        "name": "Barlow Respiratory Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 951238266,
+        "emergency": "no",
+        "phone": "+1 213 250 4200",
+        "website": "https://www.barlowhospital.org/",
+        "address": "2000 Stadium Way Los Angeles"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.962263,
+          34.094717
+        ]
+      },
+      "properties": {
+        "id": "hospital_173",
+        "name": "Hospital 173",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1158554080,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.444433,
+          34.276191
+        ]
+      },
+      "properties": {
+        "id": "hospital_174",
+        "name": "San Fernando Community Health Center",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1210494871,
+        "emergency": null,
+        "phone": "+1 818 963 5690",
+        "website": "https://www.sfchealthcenter.org/",
+        "address": "732 Mott Street San Fernando"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.157748,
+          33.865183
+        ]
+      },
+      "properties": {
+        "id": "hospital_175",
+        "name": "La Casa Psychiatric Health Facility",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1230820645,
+        "emergency": null,
+        "phone": null,
+        "website": "https://www.telecarecorp.com/la-casa-psychiatric-health-facility",
+        "address": "6060 Paramount Blvd. Long Beach"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.013346,
+          33.91638
+        ]
+      },
+      "properties": {
+        "id": "hospital_176",
+        "name": "Hospital 176",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1243259027,
+        "emergency": "no",
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.010306,
+          33.919776
+        ]
+      },
+      "properties": {
+        "id": "hospital_177",
+        "name": "Mirada Hills Rehabilitation and Convalescent Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1244763559,
+        "emergency": "no",
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.700913,
+          34.28316
+        ]
+      },
+      "properties": {
+        "id": "hospital_178",
+        "name": "New Breath Recovery",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1256718330,
+        "emergency": null,
+        "phone": "+1-805-800-8708",
+        "website": "https://newbreathrecovery.com/",
+        "address": "4767 Barnard Street Simi Valley"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.162446,
+          33.884478
+        ]
+      },
+      "properties": {
+        "id": "hospital_179",
+        "name": "Hospital 179",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1318546956,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.938113,
+          34.180471
+        ]
+      },
+      "properties": {
+        "id": "hospital_180",
+        "name": "Mary Health of the Sick Convalescent and Nursing Hospital",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1329295437,
+        "emergency": "no",
+        "phone": null,
+        "website": "https://maryhealth.com/",
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.102458,
+          33.884537
+        ]
+      },
+      "properties": {
+        "id": "hospital_181",
+        "name": "College Hospital Cerritos",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1359746684,
+        "emergency": null,
+        "phone": "+1-562-924-9581",
+        "website": "https://chc.la/ch-cerritos",
+        "address": "10802 College Place Cerritos"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.18439,
+          34.023345
+        ]
+      },
+      "properties": {
+        "id": "hospital_182",
+        "name": "Hospital 182",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1493317409,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -118.187877,
+          34.024364
+        ]
+      },
+      "properties": {
+        "id": "hospital_183",
+        "name": "Hospital 183",
+        "type": "hospital",
+        "status": "operational",
+        "capacity": null,
+        "osm_id": 1494456504,
+        "emergency": null,
+        "phone": null,
+        "website": null,
+        "address": null
+      }
+    }
+  ]
+}
