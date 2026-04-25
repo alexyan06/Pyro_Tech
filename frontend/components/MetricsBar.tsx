@@ -6,7 +6,6 @@ import type { StateSnapshot } from '@/lib/types';
 
 interface MetricsBarProps {
   snapshot: StateSnapshot['payload'] | null;
-  simTimeString?: string;
 }
 
 const TOOLTIP_MARGIN = 8; // px from viewport edges
@@ -155,7 +154,7 @@ function useCountUp(target: number, duration = 1000): number {
   return displayed;
 }
 
-export default function MetricsBar({ snapshot, simTimeString }: MetricsBarProps) {
+export default function MetricsBar({ snapshot }: MetricsBarProps) {
   const acresBurnedTarget = snapshot?.fire.acres_burned ?? 0;
   const animatedAcres = useCountUp(acresBurnedTarget);
 
@@ -232,38 +231,6 @@ export default function MetricsBar({ snapshot, simTimeString }: MetricsBarProps)
         <MetricItem label="Congested"     value={evacuation.congested_routes ?? 0}                           color="var(--accent-orange)" tooltip="Routes still open but experiencing heavy evacuation traffic" />
       </div>
 
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        paddingLeft: '1.25rem',
-        flexShrink: 0,
-        borderLeft: '1px solid var(--border)',
-        marginLeft: '0.5rem',
-        paddingTop: '2px',
-        paddingBottom: '2px',
-      }}>
-        <span style={{
-          fontFamily: 'var(--font-condensed)',
-          fontSize: '0.62rem',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--text-secondary)',
-        }}>
-          Sim Time
-        </span>
-        <span className="sim-clock">
-          {simTimeString || snapshot.sim_time}
-        </span>
-        <span style={{
-          fontFamily: 'var(--font-condensed)',
-          fontSize: '0.62rem',
-          color: 'var(--text-secondary)',
-          letterSpacing: '0.06em',
-        }}>
-          {fire.spread_rate_acres_hr.toFixed(0)} ac/hr spread
-        </span>
-      </div>
     </div>
   );
 }

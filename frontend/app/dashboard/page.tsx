@@ -531,7 +531,7 @@ export default function Home() {
       </div>
 
       {/* Metrics Bar — shows replay snapshot when scrubbing, live snapshot otherwise */}
-      <MetricsBar snapshot={(isReplaying ? replaySnapshot : currentSnapshot)?.payload ?? null} simTimeString={simTimeString} />
+      <MetricsBar snapshot={(isReplaying ? replaySnapshot : currentSnapshot)?.payload ?? null} />
 
       {/* Main Content: Map + Agent Feed */}
       <div ref={mainContentRef} className="flex min-h-0 flex-1">
