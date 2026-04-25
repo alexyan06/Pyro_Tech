@@ -100,6 +100,9 @@ export default function Home() {
   const { enqueue: enqueueAudio, isMuted, toggleMute } = useAgentAudio();
   const [storedScenario, setStoredScenario] = useState<StoredScenario | null>(null);
   const [notifications, setNotifications] = useState<MapNotification[]>([]);
+  const [mapWidth, setMapWidth] = useState(60);
+  const isDraggingRef = useRef(false);
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   const recentNotificationsRef = useRef<Map<string, number>>(new Map());
 
@@ -345,6 +348,23 @@ export default function Home() {
     }
   }, [playbookActive]);
 
+  // Drag-to-resize map / agent feed split
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current || !mainContentRef.current) return;
+      const rect = mainContentRef.current.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      setMapWidth(Math.min(80, Math.max(20, pct)));
+    };
+    const onMouseUp = () => { isDraggingRef.current = false; };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
   // Fetch FIRMS data once on mount (show current real-world hot pixels)
   useEffect(() => {
     fetch(`${API_BASE}/api/firms`)
@@ -514,9 +534,9 @@ export default function Home() {
       <MetricsBar snapshot={(isReplaying ? replaySnapshot : currentSnapshot)?.payload ?? null} simTimeString={simTimeString} />
 
       {/* Main Content: Map + Agent Feed */}
-      <div className="flex min-h-0 flex-1">
-        {/* Map (60%) */}
-        <div className="relative" style={{ width: '60%' }}>
+      <div ref={mainContentRef} className="flex min-h-0 flex-1">
+        {/* Map */}
+        <div className="relative" style={{ width: `${mapWidth}%` }}>
           <MapView
             mapState={mapState}
             center={storedScenario ? { lat: storedScenario.centerLat, lng: storedScenario.centerLng } : undefined}
@@ -550,10 +570,25 @@ export default function Home() {
           />
         </div>
 
-        {/* Agent Feed (40%) */}
+        {/* Resize handle */}
         <div
-          className="flex flex-col border-l"
-          style={{ width: '40%', borderColor: 'var(--border)' }}
+          onMouseDown={(e) => { e.preventDefault(); isDraggingRef.current = true; }}
+          style={{
+            width: '4px',
+            cursor: 'col-resize',
+            flexShrink: 0,
+            background: 'var(--border)',
+            transition: 'background 0.15s',
+            zIndex: 10,
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-purple)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'var(--border)')}
+        />
+
+        {/* Agent Feed */}
+        <div
+          className="flex flex-col"
+          style={{ width: `${100 - mapWidth}%`, borderColor: 'var(--border)' }}
         >
           <div
             className="border-b px-4 py-2"
@@ -602,7 +637,6 @@ export default function Home() {
           <>
             <SimControl label={isPaused ? 'Resume' : 'Pause'} onClick={() => { if (isPaused) { resume(); } else { pause(); } }} />
             <SimControl label="Stop" danger onClick={stop} />
-            <SimControl label="Playbook" purple onClick={requestPlaybook} />
           </>
         ) : (
           <>

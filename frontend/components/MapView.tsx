@@ -1,6 +1,6 @@
 'use client';
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
-import Map, { Source } from 'react-map-gl/mapbox';
+import Map, { Source, type MapRef } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import DeckGL from '@deck.gl/react';
 import { GeoJsonLayer, PathLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
@@ -242,6 +242,7 @@ const MapOverlay = memo(function MapOverlay({
 
   const hasFirePerimeter = (firePerimeter?.features?.length ?? 0) > 0;
   const hasAnimated = hasFirePerimeter || (mapState.resourceDispatches?.length ?? 0) > 0 || mapState.tripWaypoints.length > 0 || mapState.recentActions.length > 0;
+
 
   // When a new perimeter arrives, save the current lerped position as start point
   useEffect(() => {
@@ -529,6 +530,18 @@ export default function MapView({ mapState, center }: MapViewProps) {
   });
 
   const centeredRef = useRef(false);
+  const mapRef = useRef<MapRef>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      mapRef.current?.getMap().resize();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const setProgrammaticView = useCallback((lat: number, lng: number) => {
     setViewState(prev => ({ ...prev, latitude: lat, longitude: lng }));
@@ -679,8 +692,9 @@ export default function MapView({ mapState, center }: MapViewProps) {
   }
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-lg">
+    <div ref={containerRef} className="relative h-full w-full overflow-hidden rounded-lg">
       <Map
+        ref={mapRef}
         {...viewState}
         onMove={(evt) => setViewState(evt.viewState)}
         mapboxAccessToken={MAPBOX_TOKEN}
