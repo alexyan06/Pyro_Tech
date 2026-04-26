@@ -169,9 +169,9 @@ router.get('/scenario', (req, res) => {
 // Geocodes a city/zip, fetches OSM infrastructure, saves to in-memory state.
 // ---------------------------------------------------------------------------
 router.post('/setup-scenario', setupLimiter, async (req, res) => {
-  const { city, datetime, fireLat, fireLng, initialAcres, durationHours, windSpeed, windDirection } = req.body ?? {};
-  const parsedWindSpeed = Number(windSpeed);
-  const parsedWindDirection = Number(windDirection);
+  const { city, datetime, fireLat, fireLng, initialAcres, durationHours, windU, windV } = req.body ?? {};
+  const parsedWindU = Number(windU);
+  const parsedWindV = Number(windV);
 
   if (!city || typeof city !== 'string' || !city.trim()) {
     return res.status(400).json({ error: 'city is required' });
@@ -269,8 +269,9 @@ router.post('/setup-scenario', setupLimiter, async (req, res) => {
       initialAcres: initialAcres ?? 10,
       durationHours: Number.isFinite(durationHours) ? Math.min(12, Math.max(1, durationHours)) : 6,
       metrics: {
-        wind: Number.isFinite(parsedWindSpeed) ? Math.min(120, Math.max(0, parsedWindSpeed)) : 35,
-        windDirection: Number.isFinite(parsedWindDirection) ? ((Math.round(parsedWindDirection) % 360) + 360) % 360 : 45,
+        // Default: 35 mph from NE (45° FROM) as U/V components (m/s)
+        windU: Number.isFinite(parsedWindU) ? parsedWindU : parseFloat((-35 * 0.44704 * Math.sin(Math.PI / 4)).toFixed(4)),
+        windV: Number.isFinite(parsedWindV) ? parsedWindV : parseFloat((-35 * 0.44704 * Math.cos(Math.PI / 4)).toFixed(4)),
         temp: 85,
         humidity: 15,
       },

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Barlow, Barlow_Condensed, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { LoadingProvider } from "@/lib/loadingState";
+import LoadingScreen from "@/components/LoadingScreen";
 
 const barlow = Barlow({
   variable: "--font-barlow",
@@ -20,7 +22,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ember — Wildfire Incident Command",
+  title: "PyroTech — Wildfire Incident Command",
   description: "Multi-agent wildfire incident command simulation for emergency response planning",
 };
 
@@ -34,7 +36,12 @@ export default function RootLayout({
       lang="en"
       className={`${barlow.variable} ${barlowCondensed.variable} ${geistMono.variable} dark h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <LoadingProvider>
+          {children}
+          <LoadingScreen />
+        </LoadingProvider>
+      </body>
     </html>
   );
 }

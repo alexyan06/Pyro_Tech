@@ -1,11 +1,50 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { StateSnapshot } from '@/lib/types';
 
 interface MetricsBarProps {
   snapshot: StateSnapshot['payload'] | null;
-  simTimeString?: string;
+}
+
+const TOOLTIP_MARGIN = 8; // px from viewport edges
+
+function Tooltip({ text, anchorLeft, anchorTop }: { text: string; anchorLeft: number; anchorTop: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [left, setLeft] = useState(anchorLeft);
+
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const { width } = ref.current.getBoundingClientRect();
+    const centered = anchorLeft - width / 2;
+    const clamped  = Math.min(
+      Math.max(centered, TOOLTIP_MARGIN),
+      window.innerWidth - width - TOOLTIP_MARGIN,
+    );
+    setLeft(clamped);
+  }, [anchorLeft]);
+
+  return (
+    <div ref={ref} style={{
+      position: 'fixed',
+      top: anchorTop,
+      left,
+      background: 'var(--panel-bg)',
+      border: '1px solid var(--border-bright)',
+      borderRadius: '3px',
+      padding: '5px 9px',
+      fontSize: '0.72rem',
+      lineHeight: 1.4,
+      color: 'var(--text-primary)',
+      whiteSpace: 'nowrap',
+      pointerEvents: 'none',
+      zIndex: 9999,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+    }}>
+      {text}
+    </div>
+  );
 }
 
 interface MetricItemProps {
@@ -13,9 +52,20 @@ interface MetricItemProps {
   value: string | number;
   color: string;
   primary?: boolean;
+  tooltip?: string;
 }
 
-function MetricItem({ label, value, color, primary }: MetricItemProps) {
+function MetricItem({ label, value, color, primary, tooltip }: MetricItemProps) {
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const [tipPos, setTipPos] = useState<{ top: number; left: number } | null>(null);
+
+  const enter = useCallback(() => {
+    if (!labelRef.current) return;
+    const r = labelRef.current.getBoundingClientRect();
+    setTipPos({ top: r.bottom + 6, left: r.left + r.width / 2 });
+  }, []);
+  const leave = useCallback(() => setTipPos(null), []);
+
   return (
     <div style={{
       display: 'flex',
@@ -37,16 +87,28 @@ function MetricItem({ label, value, color, primary }: MetricItemProps) {
       }}>
         {value}
       </span>
-      <span style={{
-        fontFamily: 'var(--font-condensed)',
-        fontSize: '0.64rem',
-        letterSpacing: '0.12em',
-        textTransform: 'uppercase' as const,
-        color: 'var(--text-secondary)',
-        whiteSpace: 'nowrap' as const,
-      }}>
+      <span
+        ref={labelRef}
+        onMouseEnter={enter}
+        onMouseLeave={leave}
+        style={{
+          fontFamily: 'var(--font-condensed)',
+          fontSize: '0.64rem',
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase' as const,
+          color: 'var(--text-secondary)',
+          whiteSpace: 'nowrap' as const,
+          cursor: tooltip ? 'default' : undefined,
+          borderBottom: tooltip ? '1px dotted var(--border-bright)' : undefined,
+        }}
+      >
         {label}
       </span>
+
+      {tipPos && tooltip && createPortal(
+        <Tooltip text={tooltip} anchorLeft={tipPos.left} anchorTop={tipPos.top} />,
+        document.body,
+      )}
     </div>
   );
 }
@@ -92,7 +154,7 @@ function useCountUp(target: number, duration = 1000): number {
   return displayed;
 }
 
-export default function MetricsBar({ snapshot, simTimeString }: MetricsBarProps) {
+export default function MetricsBar({ snapshot }: MetricsBarProps) {
   const acresBurnedTarget = snapshot?.fire.acres_burned ?? 0;
   const animatedAcres = useCountUp(acresBurnedTarget);
 
@@ -112,19 +174,19 @@ export default function MetricsBar({ snapshot, simTimeString }: MetricsBarProps)
     return (
       <div style={baseStyle}>
         <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-          <MetricItem label="Acres Burned"  value="—" color="var(--accent-red)"    primary />
+          <MetricItem label="Acres Burned"  value="—" color="var(--accent-red)"    primary tooltip="Total land area consumed by the active fire perimeter" />
           <Divider />
-          <MetricItem label="Evacuees"      value="—" color="var(--accent-blue)"   />
+          <MetricItem label="Evacuees"      value="—" color="var(--accent-blue)"   tooltip="People ordered to evacuate across all active zones" />
           <Divider />
-          <MetricItem label="Shelter"       value="—" color="var(--accent-green)"  />
+          <MetricItem label="Shelter"       value="—" color="var(--accent-green)"  tooltip="Percentage of total shelter capacity currently occupied" />
           <Divider />
-          <MetricItem label="Routes Closed" value="—" color="var(--accent-orange)" />
+          <MetricItem label="Routes Closed" value="—" color="var(--accent-orange)" tooltip="Evacuation routes closed due to fire, damage, or hazard" />
           <Divider />
-          <MetricItem label="Offline"       value="—" color="var(--accent-yellow)" />
+          <MetricItem label="Offline"       value="—" color="var(--accent-yellow)" tooltip="Infrastructure facilities offline (power, water, hospitals)" />
           <Divider />
-          <MetricItem label="Pop. at Risk"  value="—" color="var(--accent-purple)" />
+          <MetricItem label="Pop. at Risk"  value="—" color="var(--accent-purple)" tooltip="Residents inside zones under any active evacuation status" />
           <Divider />
-          <MetricItem label="Congested"     value="—" color="var(--accent-orange)" />
+          <MetricItem label="Congested"     value="—" color="var(--accent-orange)" tooltip="Routes still open but experiencing heavy evacuation traffic" />
         </div>
         <span style={{
           fontFamily: 'var(--font-condensed)',
@@ -142,7 +204,7 @@ export default function MetricsBar({ snapshot, simTimeString }: MetricsBarProps)
     );
   }
 
-  const { fire, evacuation, resources, infrastructure } = snapshot;
+  const { evacuation, resources, infrastructure } = snapshot;
 
   const shelterEntries = Object.values(resources.shelters);
   const totalOccupancy = shelterEntries.reduce((sum, s) => sum + s.occupancy, 0);
@@ -150,65 +212,25 @@ export default function MetricsBar({ snapshot, simTimeString }: MetricsBarProps)
   const shelterPct = totalCapacity > 0
     ? `${Math.round((totalOccupancy / totalCapacity) * 100)}%`
     : '0%';
-  const deployedEngines = resources.summary?.engines_deployed ?? resources.engines_deployed;
-  const deployedDozers = resources.summary?.dozers_deployed ?? resources.crews_deployed;
-  const stationInventory = resources.summary?.station_inventory;
-  const resourceValue = stationInventory
-    ? `${deployedEngines}/${deployedDozers} (${stationInventory.engines_available}/${stationInventory.dozers_available})`
-    : `${deployedEngines}/${deployedDozers}`;
 
   return (
     <div style={baseStyle}>
       <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-        <MetricItem label="Acres Burned"  value={animatedAcres.toLocaleString()}                            color="var(--accent-red)"    primary />
+        <MetricItem label="Acres Burned"  value={animatedAcres.toLocaleString()}                             color="var(--accent-red)"    primary tooltip="Total land area consumed by the active fire perimeter" />
         <Divider />
-        <MetricItem label="Evacuees"      value={evacuation.total_evacuees.toLocaleString()}                color="var(--accent-blue)"   />
+        <MetricItem label="Evacuees"      value={evacuation.total_evacuees.toLocaleString()}                 color="var(--accent-blue)"   tooltip="People ordered to evacuate across all active zones" />
         <Divider />
-        <MetricItem label="Shelter"       value={shelterPct}                                                color="var(--accent-green)"  />
+        <MetricItem label="Shelter"       value={shelterPct}                                                 color="var(--accent-green)"  tooltip="Percentage of total shelter capacity currently occupied" />
         <Divider />
-        <MetricItem label="Eng/Doz"       value={resourceValue}                                             color="var(--accent-green)"  />
+        <MetricItem label="Routes Closed" value={evacuation.routes_closed}                                   color="var(--accent-orange)" tooltip="Evacuation routes closed due to fire, damage, or hazard" />
         <Divider />
-        <MetricItem label="Routes Closed" value={evacuation.routes_closed}                                  color="var(--accent-orange)" />
+        <MetricItem label="Offline"       value={infrastructure.facilities_offline}                          color="var(--accent-yellow)" tooltip="Infrastructure facilities offline (power, water, hospitals)" />
         <Divider />
-        <MetricItem label="Offline"       value={infrastructure.facilities_offline}                         color="var(--accent-yellow)" />
+        <MetricItem label="Pop. at Risk"  value={evacuation.total_population_at_risk?.toLocaleString() ?? 0} color="var(--accent-purple)" tooltip="Residents inside zones under any active evacuation status" />
         <Divider />
-        <MetricItem label="Pop. at Risk"  value={evacuation.total_population_at_risk?.toLocaleString() ?? 0} color="var(--accent-purple)" />
-        <Divider />
-        <MetricItem label="Congested"     value={evacuation.congested_routes ?? 0}                          color="var(--accent-orange)" />
+        <MetricItem label="Congested"     value={evacuation.congested_routes ?? 0}                           color="var(--accent-orange)" tooltip="Routes still open but experiencing heavy evacuation traffic" />
       </div>
 
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        paddingLeft: '1.25rem',
-        flexShrink: 0,
-        borderLeft: '1px solid var(--border)',
-        marginLeft: '0.5rem',
-        paddingTop: '2px',
-        paddingBottom: '2px',
-      }}>
-        <span style={{
-          fontFamily: 'var(--font-condensed)',
-          fontSize: '0.62rem',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--text-secondary)',
-        }}>
-          Sim Time
-        </span>
-        <span className="sim-clock">
-          {simTimeString || snapshot.sim_time}
-        </span>
-        <span style={{
-          fontFamily: 'var(--font-condensed)',
-          fontSize: '0.62rem',
-          color: 'var(--text-secondary)',
-          letterSpacing: '0.06em',
-        }}>
-          {fire.spread_rate_acres_hr.toFixed(0)} ac/hr spread
-        </span>
-      </div>
     </div>
   );
 }

@@ -10,10 +10,10 @@ export interface ScenarioInput {
   fireOrigin: { lat: number; lng: number };
   /** Observed or forecast weather metrics at simulation start */
   metrics: {
-    /** Wind speed in mph */
-    wind: number;
-    /** Wind direction in degrees, 0=N, 90=E */
-    windDirection?: number;
+    /** Eastward wind component in m/s (positive = blowing east) */
+    windU: number;
+    /** Northward wind component in m/s (positive = blowing north) */
+    windV: number;
     /** Temperature in °F */
     temp: number;
     /** Relative humidity 0–100 */
@@ -25,6 +25,8 @@ export interface ScenarioInput {
   historical_mode?: boolean;
   /** Simulated incident duration in hours. Defaults to 6 for legacy scenarios. */
   durationHours?: number;
+  /** If true, each agent waits for the previous agent's TTS audio to finish before starting. */
+  enableTts?: boolean;
 }
 
 // Trip waypoint for Deck.gl TripsLayer animation
@@ -69,6 +71,14 @@ export interface StateSnapshot {
       perimeter_geojson: GeoJSON.FeatureCollection | null;
       acres_burned: number;
       spread_rate_acres_hr: number;
+      suppression_zones?: Array<{
+        geojson: GeoJSON.Feature | GeoJSON.FeatureCollection | GeoJSON.Polygon | GeoJSON.MultiPolygon;
+        factor: number;
+        type: string;
+        center: [number, number];
+        radius_km: number;
+        count: number;
+      }>;
     };
     evacuation: {
       zones: Record<string, ZoneStatus>;
@@ -80,6 +90,15 @@ export interface StateSnapshot {
       routes_closed: number;
       total_population_at_risk?: number;
       congested_routes?: number;
+      closed_routes?: string[];
+      route_congestion?: Array<{
+        route_id: string;
+        status: 'open' | 'congested' | 'closed';
+        load_pct: number;
+        reason?: string;
+        capacity_multiplier?: number;
+      }>;
+      traffic_jams?: Array<{ route_id: string; severity: 'extreme' | 'high' | 'moderate' }>;
     };
     resources: {
       engines_deployed: number;
@@ -123,10 +142,12 @@ export interface StateSnapshot {
         dozers_committed?: number;
       }>;
       shelters: Record<string, ShelterState>;
+      deployments?: Array<{ type: string; location: [number, number]; count: number }>;
     };
     infrastructure: {
       facilities_offline: number;
       power_shutoff_areas: number;
+      facilities?: Record<string, { name: string; status: string }>;
     };
   };
 }
@@ -196,6 +217,7 @@ export type ServerMessage =
   | BranchCompleteMessage
   | TimeUpdateMessage
   | ParticleUpdateMessage
+  | { type: 'simulation_ready' }
   | { type: 'error'; payload: { message: string } };
 
 export type AgentName =
@@ -336,7 +358,8 @@ export type MapEventData =
       origin: [number, number] | null;
       head: [number, number] | null;
       bearing: number;
-      wind_speed: number;
+      wind_u: number;
+      wind_v: number;
       spread_rate_acres_hr: number;
       spot_fire_count?: number;
       elapsed_hours?: number;

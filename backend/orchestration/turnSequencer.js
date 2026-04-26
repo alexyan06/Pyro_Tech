@@ -19,6 +19,44 @@ const PHYSICS_INTERVAL_MS = 500;  // physics update cadence (real ms)
 const LOGICAL_MINUTES_PER_CYCLE = 30;   // each agent cycle advances sim clock by 30 min
 const DEMO_AGENT_CYCLE_MS = 30_000; // smooth visual time between agent turns
 const DEFAULT_DURATION_HOURS = 6;
+// Lead-in between sending `simulation_ready` and the first physics tick.
+// The frontend's LoadingScreen needs OVERLAY_CLEAR_BUDGET_MS to finish its
+// `done`-phase tween (~140 ms) and opacity fade-out (FADE_MS = 650 ms in
+// frontend/components/LoadingScreen.tsx). After the overlay is fully gone we
+// hold for POST_FADE_GAP_MS — a deliberate beat on a clean simulation map
+// before the fire perimeter and any agent transmissions arrive. Keep these
+// two sides in sync if FADE_MS or the done-tween rate change.
+const OVERLAY_CLEAR_BUDGET_MS = 800;
+const POST_FADE_GAP_MS = 1000;
+const SIM_LEAD_IN_MS = OVERLAY_CLEAR_BUDGET_MS + POST_FADE_GAP_MS;
+
+// Default wind: 35 mph from NE (45° FROM) expressed as U/V components (m/s)
+const DEFAULT_WIND_U = parseFloat((-35 * 0.44704 * Math.sin(Math.PI / 4)).toFixed(4));
+const DEFAULT_WIND_V = parseFloat((-35 * 0.44704 * Math.cos(Math.PI / 4)).toFixed(4));
+
+/**
+ * Convert U/V wind components (m/s) to a human-readable string for agent prompts.
+ * Returns speed in mph and FROM direction in degrees.
+ */
+function uvToHuman(windU, windV) {
+  const speedMs = Math.sqrt(windU * windU + windV * windV);
+  const speedMph = Math.round(speedMs / 0.44704);
+  const toBearingDeg = ((Math.atan2(windU, windV) * 180 / Math.PI) + 360) % 360;
+  const fromDeg = Math.round((toBearingDeg + 180) % 360);
+  return { speedMph, fromDeg };
+}
+
+/**
+ * Convert FROM-degrees (meteorological) + speed (mph) to U/V components (m/s).
+ */
+function fromDegToUV(fromDeg, speedMph) {
+  const speedMs = speedMph * 0.44704;
+  const rad = fromDeg * Math.PI / 180;
+  return {
+    windU: parseFloat((-speedMs * Math.sin(rad)).toFixed(4)),
+    windV: parseFloat((-speedMs * Math.cos(rad)).toFixed(4)),
+  };
+}
 const MAX_TICKS = 6;    // kept for branch simulation compatibility
 
 function normalizeDurationHours(value) {
@@ -59,6 +97,8 @@ class TurnSequencer {
     const durationHours = normalizeDurationHours(scenarioInput.durationHours);
     const totalCycles = Math.ceil(durationHours * 60 / LOGICAL_MINUTES_PER_CYCLE);
     scenarioInput.durationHours = durationHours;
+    this.ttsMode = opts.enableTts === true;
+    this._audioWaiters = new Map();
     this.stateManager.reset();
     this.paused = false;
     this.stopped = false;
@@ -94,10 +134,10 @@ class TurnSequencer {
 
     // Start physics immediately with defaults; real weather updates the engine when it arrives.
     let weather = {
-      windSpeed:    metricsOverrides.wind        ?? 35,
-      windDirection: metricsOverrides.windDirection ?? 45,
-      temperature:  metricsOverrides.temp        ?? 75,
-      humidity:     metricsOverrides.humidity    ?? 30,
+      windU:        metricsOverrides.windU ?? DEFAULT_WIND_U,
+      windV:        metricsOverrides.windV ?? DEFAULT_WIND_V,
+      temperature:  metricsOverrides.temp  ?? 75,
+      humidity:     metricsOverrides.humidity ?? 30,
       windGusts:    40,
       pm25:         15,
     };
@@ -105,17 +145,18 @@ class TurnSequencer {
     // Kick off the weather fetch in the background — engine will be reseeded once it lands.
     fetchWeather(weatherLat, weatherLng).then(realWeather => {
       if (this.stopped) return;
-      if (metricsOverrides.wind         != null) realWeather.windSpeed     = metricsOverrides.wind;
-      if (metricsOverrides.windDirection != null) realWeather.windDirection = metricsOverrides.windDirection;
-      if (metricsOverrides.temp         != null) realWeather.temperature   = metricsOverrides.temp;
-      if (metricsOverrides.humidity     != null) realWeather.humidity      = metricsOverrides.humidity;
+      if (metricsOverrides.windU != null) realWeather.windU = metricsOverrides.windU;
+      if (metricsOverrides.windV != null) realWeather.windV = metricsOverrides.windV;
+      if (metricsOverrides.temp  != null) realWeather.temperature = metricsOverrides.temp;
+      if (metricsOverrides.humidity != null) realWeather.humidity = metricsOverrides.humidity;
       weather = realWeather;
       // Reseed engine with real weather values so physics reflects actual conditions
-      engine.windBearing = realWeather.windDirection || 45;
-      engine.windSpeed   = realWeather.windSpeed     || 40;
-      engine.humidity    = realWeather.humidity      ?? 30;
-      engine.temperature = realWeather.temperature   ?? 75;
-      engine.pm25        = realWeather.pm25          ?? 15;
+      const { windBearing: rb, windSpeed: rs } = WildfireEngine.uvToEngine(realWeather.windU ?? DEFAULT_WIND_U, realWeather.windV ?? DEFAULT_WIND_V);
+      engine.windBearing = rb;
+      engine.windSpeed   = rs;
+      engine.humidity    = realWeather.humidity    ?? 30;
+      engine.temperature = realWeather.temperature ?? 75;
+      engine.pm25        = realWeather.pm25        ?? 15;
       console.log('[Sequencer] Weather resolved (background):', realWeather);
     }).catch(err => {
       console.warn('[Sequencer] Weather fetch failed, using defaults:', err.message);
@@ -123,8 +164,7 @@ class TurnSequencer {
 
     console.log('[Sequencer] Starting physics with default weather; real weather fetching in background...');
 
-    const windBearing = weather.windDirection || 45;
-    const windSpeed = weather.windSpeed || 40;
+    const { windBearing, windSpeed } = WildfireEngine.uvToEngine(weather.windU, weather.windV);
     const engine = new WildfireEngine(
       [scenarioInput.fireOrigin.lng, scenarioInput.fireOrigin.lat],
       windBearing,
@@ -145,7 +185,15 @@ class TurnSequencer {
     // ── Physics loop: continuous fire + particles + congestion ─────────────────
     let physicsCount = 0;
     let physicsIntervalId;
-    physicsIntervalId = setInterval(() => {
+    let physicsStartTimeoutId;
+
+    // Tell the client backend init is done. The client uses this to dismiss
+    // the loading overlay; we hold the first physics tick for SIM_LEAD_IN_MS
+    // so the overlay finishes its fade-out on a clean (no fire, no agent
+    // transmissions) map.
+    this.sendToClient(ws, { type: 'simulation_ready' });
+
+    const physicsTick = () => {
       if (this.stopped) { clearInterval(physicsIntervalId); return; }
       if (this.paused) return;
 
@@ -269,10 +317,19 @@ class TurnSequencer {
       }
 
       physicsCount++;
-    }, PHYSICS_INTERVAL_MS);
+    };
+
+    physicsStartTimeoutId = setTimeout(() => {
+      if (this.stopped) return;
+      physicsTick();
+      physicsIntervalId = setInterval(physicsTick, PHYSICS_INTERVAL_MS);
+    }, SIM_LEAD_IN_MS);
 
     // ── Agent loop: runs exactly totalCycles times, advancing logical sim clock ──
     const runAgentLoop = async () => {
+      // Hold the same lead-in as the physics loop so no agent transmissions
+      // can stream while the client's loading overlay is fading out.
+      await new Promise(r => setTimeout(r, SIM_LEAD_IN_MS));
       while (this._agentRunCount < totalCycles && !this.stopped) {
         while (this.paused && !this.stopped) {
           await new Promise(r => setTimeout(r, 500));
@@ -292,6 +349,7 @@ class TurnSequencer {
     await runAgentLoop();
     // Brief grace period for the physics loop to observe this.stopped and flush final state
     await new Promise(r => setTimeout(r, 600));
+    clearTimeout(physicsStartTimeoutId);
     clearInterval(physicsIntervalId);
 
     const executiveSummary = await generateExecutiveSummary(
@@ -449,15 +507,29 @@ class TurnSequencer {
       elapsed_hours: elapsedHours,
     });
 
-    // Fire-and-forget voice synthesis (non-blocking)
-    synthesize(agent.name, fullText).then(audioBuffer => {
-      if (audioBuffer) {
+    if (this.ttsMode) {
+      // Sequential TTS: synthesize, send, then await client ack before returning.
+      // If synthesis fails (null buffer), skip the wait so the sim never deadlocks.
+      let audioBuffer = null;
+      try { audioBuffer = await synthesize(agent.name, fullText); } catch { /* optional */ }
+      if (audioBuffer && !this.stopped) {
+        // Register waiter BEFORE sending so a fast audio_done ack never races past it.
+        const key = `${agent.name}:${tick}`;
+        const ackPromise = new Promise((resolve) => {
+          const timer = setTimeout(() => {
+            this._audioWaiters.delete(key);
+            console.warn(`[TTS] audio_done timeout for ${key}`);
+            resolve();
+          }, 30000);
+          this._audioWaiters.set(key, { resolve, timer });
+        });
         this.sendToClient(ws, {
           type: 'agent_audio',
           payload: { agent: agent.name, audio_base64: audioBuffer.toString('base64'), tick },
         });
+        await ackPromise;
       }
-    }).catch(() => { }); // voice is optional, swallow errors
+    }
 
     return { agent: agent.name, text: fullText, mapEvents };
   }
@@ -975,7 +1047,7 @@ class TurnSequencer {
     const usedZones = new Set(existingFlows.map(f => f.from_zone));
 
     const statusRank = { mandatory: 0, warning: 1, voluntary: 2, clear: 3 };
-    const dynamicStatus = s.evacuation.zones || {};
+    const dynamicStatus = { ...(s.evacuation.derivedZones || {}), ...(s.evacuation.zones || {}) };
 
     // Rank zones by (dynamic evacuation severity, then proximity to fire).
     const rankedZones = zoneIds
@@ -1108,7 +1180,8 @@ class TurnSequencer {
       origin,
       head,
       bearing: props.wind_bearing ?? this.stateManager.state.fire.spread_bearing ?? 0,
-      wind_speed: props.wind_speed ?? 0,
+      wind_u: props.wind_u ?? 0,
+      wind_v: props.wind_v ?? 0,
       spread_rate_acres_hr: props.spread_rate ?? this.stateManager.state.fire.spread_rate_acres_hr ?? 0,
       spot_fire_count: spotCount,
       elapsed_hours: elapsedHours,
@@ -1209,7 +1282,7 @@ class TurnSequencer {
       `BBOX (W,S,E,N): ${sc.bbox.join(', ')}`,
       `SIMULATION TIME: ${simTime}`,
       `TIME ELAPSED: ${formatElapsedHours(elapsedHours)} of ${formatElapsedHours(sc.durationHours || DEFAULT_DURATION_HOURS)} (Agent Run ${agentRun} — Continuous Real-Time Simulation)`,
-      `WEATHER CONDITIONS: Temperature ${weather.temperature}°F, Humidity ${weather.humidity}%, Wind ${weather.windSpeed}mph from ${weather.windDirection}° (gusts to ${weather.windGusts}mph)`,
+      (() => { const { speedMph, fromDeg } = uvToHuman(weather.windU ?? DEFAULT_WIND_U, weather.windV ?? DEFAULT_WIND_V); return `WEATHER CONDITIONS: Temperature ${weather.temperature}°F, Humidity ${weather.humidity}%, Wind ${speedMph}mph from ${fromDeg}° (gusts to ${weather.windGusts}mph)`; })(),
       `PM2.5 Air Quality: ${weather.pm25} µg/m³`,
       this.stateManager.getContext(),
       this._buildFireStationContext(sc.fireOrigin),
@@ -1256,7 +1329,28 @@ class TurnSequencer {
     }
     this.paused = false;
   }
-  stop() { this.stopped = true; }
+  stop() {
+    this.stopped = true;
+    // Unblock any pending audio ack waiters so the sim loop can exit cleanly.
+    if (this._audioWaiters) {
+      for (const { resolve, timer } of this._audioWaiters.values()) {
+        clearTimeout(timer);
+        resolve();
+      }
+      this._audioWaiters.clear();
+    }
+  }
+
+  _resolveAudioAck(agent, tick) {
+    if (!this._audioWaiters) return;
+    const key = `${agent}:${tick}`;
+    const waiter = this._audioWaiters.get(key);
+    if (waiter) {
+      clearTimeout(waiter.timer);
+      this._audioWaiters.delete(key);
+      waiter.resolve();
+    }
+  }
 
   /**
    * Run a "what-if" branch simulation.
@@ -1278,21 +1372,28 @@ class TurnSequencer {
       branchState.state = forkedState;
 
       const branchAgents = this.agents.filter(a => BRANCH_AGENTS.includes(a.name));
-      const weather = { temperature: 75, humidity: 8, windSpeed: 70, windDirection: 45, windGusts: 95 };
+      // Branch weather starts as U/V equivalent of 70 mph from NE (45° FROM)
+      let branchFromDeg = 45;
+      let branchSpeedMph = 70;
+      const weather = { temperature: 75, humidity: 8, windGusts: 95 };
 
-      // Expanded weather parser
+      // Expanded weather parser — parse natural-language modifier into FROM degrees + mph
       const dirMap = {
         N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5, SE: 135, SSE: 157.5,
         S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5
       };
       for (const [dir, deg] of Object.entries(dirMap)) {
         if (new RegExp(`\\b${dir}\\b|${dir.toLowerCase()}`, 'i').test(scenarioModifier)) {
-          weather.windDirection = deg;
+          branchFromDeg = deg;
           break;
         }
       }
       const speedMatch = scenarioModifier.match(/(\d+)\s*mph/i);
-      if (speedMatch) weather.windSpeed = parseInt(speedMatch[1], 10);
+      if (speedMatch) branchSpeedMph = parseInt(speedMatch[1], 10);
+
+      const { windU: bWindU, windV: bWindV } = fromDegToUV(branchFromDeg, branchSpeedMph);
+      weather.windU = bWindU;
+      weather.windV = bWindV;
 
       const currentFire = forkedState.fire?.perimeter_geojson?.features?.[0];
       let fireCenter = [-118.53, 34.04];
@@ -1302,11 +1403,11 @@ class TurnSequencer {
         const cy = coords.reduce((s, c) => s + c[1], 0) / coords.length;
         fireCenter = [cx, cy];
       }
-      const { WildfireEngine } = require('../simulation/wildfireEngine');
-      const branchEngine = new WildfireEngine(
+      const { WildfireEngine: _BranchWE } = require('../simulation/wildfireEngine');
+      const branchEngine = _BranchWE.fromUV(
         fireCenter,
-        weather.windDirection,
-        weather.windSpeed,
+        weather.windU,
+        weather.windV,
         {
           humidity: weather.humidity,
           temperature: weather.temperature,
@@ -1340,7 +1441,7 @@ class TurnSequencer {
           `WHAT-IF BRANCH — MODIFIER: ${scenarioModifier}`,
           `DIVERGES FROM MAIN SIM AT ${formatElapsedHours(startElapsed)} ELAPSED`,
           `CURRENT BRANCH TIME: ${formatElapsedHours(elapsedHours)} elapsed`,
-          `WEATHER CHANGE: Wind ${weather.windSpeed}mph from ${weather.windDirection}°`,
+          (() => { const { speedMph, fromDeg } = uvToHuman(weather.windU, weather.windV); return `WEATHER CHANGE: Wind ${speedMph}mph from ${fromDeg}°`; })(),
           branchState.getContext(),
           branchOutputs.length > 0 ? '\nBRANCH PRIOR OUTPUTS:\n' + branchOutputs.map(o => `--- ${o.agent.toUpperCase()} ---\n${o.text.substring(0, 600)}`).join('\n') : '',
         ].join('\n\n');
