@@ -536,6 +536,9 @@ export default function Home() {
             letterSpacing: '0.1em',
             color: 'var(--accent)',
             margin: 0,
+            padding: '4px 14px',
+            background: 'radial-gradient(ellipse at center, oklch(45% 0.25 18 / 0.45) 0%, transparent 70%)',
+            textShadow: '0 0 16px oklch(55% 0.25 18 / 0.7), 0 0 32px oklch(45% 0.22 18 / 0.4)',
           }}>
             PYROTECH
           </h1>
