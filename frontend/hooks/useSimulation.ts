@@ -25,14 +25,7 @@ interface UseSimulationOptions {
   onParticleUpdate?: (particles: [number, number][], trips?: TripWaypoint[]) => void;
 }
 
-interface SimClockBase {
-  simMs: number;
-  receivedAt: number;
-  rate: number;
-}
-
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const DEFAULT_SIM_CLOCK_RATE = 60;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatSimDate(simDate: Date): string {
   const hh = String(simDate.getUTCHours()).padStart(2, '0');
@@ -44,22 +37,22 @@ function formatSimDate(simDate: Date): string {
 // ScenarioInput is imported from @/lib/types — no local options interface needed.
 
 export function useSimulation(options: UseSimulationOptions = {}) {
-  const [isConnected, setIsConnected]   = useState(false);
-  const [isRunning, setIsRunning]       = useState(false);
-  const [isPaused, setIsPaused]         = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [agentMessages, setAgentMessages] = useState<Map<AgentName, string[]>>(new Map());
   // Flat chronological list for in-order rendering
-  const [timeline, setTimeline]         = useState<Array<{ agent: AgentName; text: string }>>([]);
+  const [timeline, setTimeline] = useState<Array<{ agent: AgentName; text: string }>>([]);
   const [currentAgent, setCurrentAgent] = useState<AgentName | null>(null);
-  const [currentText, setCurrentText]   = useState('');
+  const [currentText, setCurrentText] = useState('');
   const [currentSnapshot, setCurrentSnapshot] = useState<StateSnapshot | null>(null);
-  const [snapshots, setSnapshots]       = useState<StateSnapshot[]>([]);
-  const [playbook, setPlaybook]         = useState<PlaybookData | null>(null);
-  const [simTick, setSimTick]           = useState<number>(0);
+  const [snapshots, setSnapshots] = useState<StateSnapshot[]>([]);
+  const [playbook, setPlaybook] = useState<PlaybookData | null>(null);
+  const [simTick, setSimTick] = useState<number>(0);
   const [simTimeString, setSimTimeString] = useState<string>('');
   const [agentConfidence, setAgentConfidence] = useState<Partial<Record<AgentName, number>>>({});
 
-  const [branchId, setBranchId]         = useState<string | null>(null);
+  const [branchId, setBranchId] = useState<string | null>(null);
   const [branchRunning, setBranchRunning] = useState(false);
   const [branchModifier, setBranchModifier] = useState<string>('');
   const [branchMessages, setBranchMessages] = useState<BranchAgentMessage[]>([]);
@@ -67,14 +60,19 @@ export function useSimulation(options: UseSimulationOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null);
   const streamBufferRef = useRef<Map<AgentName, string>>(new Map());
   const branchBufferRef = useRef<Map<string, string>>(new Map()); // key: `${branchId}:${agent}`
-  const onMapEventRef   = useRef(options.onMapEvent);
+  const onMapEventRef = useRef(options.onMapEvent);
   const onAgentAudioRef = useRef(options.onAgentAudio);
   const onStateSnapshotRef = useRef(options.onStateSnapshot);
   const onParticleUpdateRef = useRef(options.onParticleUpdate);
-  const simClockBaseRef = useRef<SimClockBase | null>(null);
+
+  // Independent client-side clock: ticks forward at a fixed rate (60x)
+  // regardless of whether backend messages arrive on time.
+  // 60x = 1 real second → 1 sim minute.
+  const SIM_CLOCK_RATE = 60;
+  const clockBaseRef = useRef<{ simMs: number; wallMs: number } | null>(null);
 
   useEffect(() => {
-    onMapEventRef.current   = options.onMapEvent;
+    onMapEventRef.current = options.onMapEvent;
     onAgentAudioRef.current = options.onAgentAudio;
     onStateSnapshotRef.current = options.onStateSnapshot;
     onParticleUpdateRef.current = options.onParticleUpdate;
@@ -90,37 +88,34 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     return m ? Math.min(100, Math.max(0, parseInt(m[1], 10))) : null;
   }
 
+  // When the backend sends a time, update the base for interpolation.
+  // Compare against the current INTERPOLATED display position (not just the base)
+  // to prevent backward jumps when the backend resumes after event loop blocking.
   const updateSimClockBase = useCallback((simTime: string) => {
     const simDate = new Date(simTime);
     const simMs = simDate.getTime();
     if (!Number.isFinite(simMs)) return;
-
-    const now = Date.now();
-    const previous = simClockBaseRef.current;
-    let rate = previous?.rate ?? DEFAULT_SIM_CLOCK_RATE;
-    if (previous) {
-      const realDelta = now - previous.receivedAt;
-      const simDelta = simMs - previous.simMs;
-      if (realDelta > 100 && simDelta > 0) {
-        rate = Math.min(240, Math.max(1, simDelta / realDelta));
-      }
+    const prev = clockBaseRef.current;
+    if (prev) {
+      // Where the frontend display currently IS (base + interpolation)
+      const currentDisplayMs = prev.simMs + (Date.now() - prev.wallMs) * SIM_CLOCK_RATE;
+      if (simMs < currentDisplayMs) return; // would cause a backward jump — ignore
     }
-
-    simClockBaseRef.current = { simMs, receivedAt: now, rate };
+    clockBaseRef.current = { simMs, wallMs: Date.now() };
     setSimTimeString(formatSimDate(simDate));
   }, []);
 
+  // Independent frontend clock — ticks every 200ms using the fixed 60x rate.
+  // This runs entirely on the client and never freezes.
   useEffect(() => {
     if (!isRunning || isPaused) return;
-
     const interval = window.setInterval(() => {
-      const base = simClockBaseRef.current;
+      const base = clockBaseRef.current;
       if (!base) return;
-      const interpolatedMs = base.simMs + (Date.now() - base.receivedAt) * base.rate;
-      const formatted = formatSimDate(new Date(interpolatedMs));
-      setSimTimeString(prev => prev === formatted ? prev : formatted);
-    }, 250);
-
+      const elapsed = Date.now() - base.wallMs;
+      const currentSimMs = base.simMs + elapsed * SIM_CLOCK_RATE;
+      setSimTimeString(formatSimDate(new Date(currentSimMs)));
+    }, 200);
     return () => window.clearInterval(interval);
   }, [isRunning, isPaused]);
 
@@ -130,7 +125,7 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
 
-    ws.onopen  = () => { setIsConnected(true); };
+    ws.onopen = () => { setIsConnected(true); };
     ws.onclose = () => { setIsConnected(false); setIsRunning(false); wsRef.current = null; };
     ws.onerror = () => { console.error('WebSocket error'); };
 
@@ -281,17 +276,17 @@ export function useSimulation(options: UseSimulationOptions = {}) {
       setSimTimeString('');
       setAgentConfidence({});
       streamBufferRef.current = new Map();
-      simClockBaseRef.current = null;
+      clockBaseRef.current = null;
 
       send({
         type: 'start_simulation',
         payload: {
-          location:      input.location,
-          bbox:          input.bbox,
-          timestamp:     input.timestamp,
-          fireOrigin:    input.fireOrigin,
-          metrics:       input.metrics,
-          initialAcres:  input.initialAcres ?? 10,
+          location: input.location,
+          bbox: input.bbox,
+          timestamp: input.timestamp,
+          fireOrigin: input.fireOrigin,
+          metrics: input.metrics,
+          initialAcres: input.initialAcres ?? 10,
           historical_mode: input.historical_mode ?? false,
           durationHours: input.durationHours ?? 6,
         },
@@ -309,7 +304,7 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     setIsPaused(false);
     send({ type: 'control', payload: { action: 'resume' } });
   }, [send]);
-  const stop    = useCallback(() => { send({ type: 'control', payload: { action: 'stop' } }); setIsRunning(false); }, [send]);
+  const stop = useCallback(() => { send({ type: 'control', payload: { action: 'stop' } }); setIsRunning(false); }, [send]);
   const requestPlaybook = useCallback(() => send({ type: 'request_playbook', payload: {} }), [send]);
 
   const startBranch = useCallback(

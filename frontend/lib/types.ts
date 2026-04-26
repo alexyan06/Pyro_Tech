@@ -85,6 +85,43 @@ export interface StateSnapshot {
       engines_deployed: number;
       crews_deployed: number;
       air_tankers_active: number;
+      summary?: {
+        engines_deployed: number;
+        dozers_deployed: number;
+        total_deployed: number;
+        by_status: Record<string, number>;
+        station_inventory?: {
+          engines_total: number;
+          engines_available: number;
+          dozers_total: number;
+          dozers_available: number;
+        };
+      };
+      groups?: Record<string, {
+        id: string;
+        type: 'engine' | 'dozer' | string;
+        count: number;
+        homeStationId?: string | null;
+        status: string;
+        location?: [number, number] | null;
+        destination?: [number, number] | null;
+        dispatchPath?: [number, number][];
+        departedElapsedHours?: number;
+        arrivalElapsedHours?: number;
+        assignmentId?: string | null;
+      }>;
+      stations?: Record<string, {
+        id: string;
+        name: string;
+        location: { lng: number; lat: number };
+        status: string;
+        engines_total?: number;
+        engines_available?: number;
+        engines_committed?: number;
+        dozers_total?: number;
+        dozers_available?: number;
+        dozers_committed?: number;
+      }>;
       shelters: Record<string, ShelterState>;
     };
     infrastructure: {
@@ -215,10 +252,26 @@ export type MapEventData =
       resource_type: string;
       location: [number, number];
       count: number;
+      resource_group_id?: string;
       from_station_id?: string;
       from_location?: [number, number];
       dispatch_path?: [number, number][];
       travel_hours?: number;
+      arrival_elapsed_hours?: number;
+      action_id?: string; ui_message?: string; source_agent?: AgentName;
+    }
+  | {
+      type: 'resource_update';
+      resource_group_id: string;
+      resource_type: string;
+      count: number;
+      status: 'available' | 'dispatching' | 'staged' | 'working' | 'released' | 'failed' | string;
+      location?: [number, number] | null;
+      destination?: [number, number] | null;
+      from_station_id?: string | null;
+      assignment_id?: string | null;
+      assignment_type?: string;
+      progress?: number;
       arrival_elapsed_hours?: number;
       action_id?: string; ui_message?: string; source_agent?: AgentName;
     }
@@ -265,7 +318,17 @@ export type MapEventData =
       geojson: GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.FeatureCollection | GeoJSON.Feature;
       visual_geojson?: GeoJSON.Geometry | GeoJSON.FeatureCollection | GeoJSON.Feature;
       effectiveness: number;
+      progress?: number;
+      line_progress?: number;
+      effect_type?: string;
       source_resource_event_id?: string;
+      action_id?: string; ui_message?: string; source_agent?: AgentName;
+    }
+  | {
+      type: 'remove_suppression_zone';
+      suppression_zone_id: string;
+      source_resource_group_id?: string;
+      source_assignment_id?: string;
       action_id?: string; ui_message?: string; source_agent?: AgentName;
     }
   | {

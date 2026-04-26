@@ -31,6 +31,10 @@ export interface SuppressionZone {
   visual_geojson?: GeoJSON.Geometry | GeoJSON.FeatureCollection | GeoJSON.Feature;
   effectiveness: number;
   resource_type: string;
+  progress?: number;
+  line_progress?: number;
+  effect_type?: string;
+  arrivedAt?: number;
 }
 
 export interface FireBehaviorState {
@@ -43,13 +47,26 @@ export interface FireBehaviorState {
   elapsed_hours?: number;
 }
 
+export interface ResourceGroupState {
+  id: string;
+  type: string;
+  count: number;
+  status: string;
+  location?: [number, number] | null;
+  destination?: [number, number] | null;
+  assignment_id?: string | null;
+  assignment_type?: string;
+  progress?: number;
+}
+
 export interface MapState {
   // Dynamic agent-driven state
   firePerimeter: GeoJSON.FeatureCollection | null;
   zones: Record<string, ZoneStatus>;
   closedRoutes: Set<string>;
   shelters: Record<string, ShelterState>;
-  resources: Array<{ type: string; location: [number, number]; count: number }>;
+  resources: Array<{ id?: string; type: string; location: [number, number]; count: number }>;
+  resourceGroups: Record<string, ResourceGroupState>;
   infrastructure: Record<string, { name: string; status: string }>;
   evacuationFlows: Array<{ from: string; to: string; population: number }>;
   tripWaypoints: TripWaypoint[];
@@ -60,6 +77,7 @@ export interface MapState {
   particles: Array<[number, number]>;
   resourceDispatches: Array<{
     id: string;
+    groupId?: string;
     type: string;
     from: [number, number];
     to: [number, number];
@@ -88,7 +106,9 @@ export type MapAction =
   | { type: 'CLOSE_ROUTE'; routeId: string }
   | { type: 'OPEN_ROUTE'; routeId: string }
   | { type: 'UPDATE_SHELTER'; shelterId: string; occupancy: number; capacity: number; status: 'open' | 'full' | 'closed' }
-  | { type: 'DEPLOY_RESOURCE'; resourceType: string; location: [number, number]; count: number }
+  | { type: 'DEPLOY_RESOURCE'; resourceType: string; location: [number, number]; count: number; groupId?: string }
+  | { type: 'UPSERT_RESOURCE_GROUP'; group: ResourceGroupState }
+  | { type: 'REMOVE_RESOURCE'; groupId: string }
   | { type: 'SET_INFRASTRUCTURE'; facilityId: string; name: string; status: string }
   | { type: 'SET_EVACUATION_FLOW'; fromZone: string; toShelter: string; population: number }
   | { type: 'SET_TRIP_WAYPOINTS'; waypoints: TripWaypoint[] }
@@ -101,11 +121,13 @@ export type MapAction =
   | { type: 'SET_THREAT_ZONE'; zoneId: string; level: 'extreme' | 'high' | 'moderate' }
   | { type: 'ADD_ALERT'; zone_ids: string[]; message: string; channel: string }
   | { type: 'SET_PARTICLES'; particles: Array<[number, number]> }
-  | { type: 'ADD_RESOURCE_DISPATCH'; dispatch: { id: string; type: string; from: [number, number]; to: [number, number]; path?: [number, number][]; durationMs?: number; startedAt: number } }
+  | { type: 'ADD_RESOURCE_DISPATCH'; dispatch: { id: string; groupId?: string; type: string; from: [number, number]; to: [number, number]; path?: [number, number][]; durationMs?: number; startedAt: number } }
+  | { type: 'COMPLETE_RESOURCE_DISPATCH'; groupId: string }
   | { type: 'PRUNE_RESOURCE_DISPATCHES'; olderThan: number }
   | { type: 'ADD_RECENT_ACTION'; action: MapActionPulse }
   | { type: 'EXPIRE_RECENT_ACTIONS'; olderThan: number }
   | { type: 'ADD_SUPPRESSION_ZONE'; zone: SuppressionZone }
+  | { type: 'REMOVE_SUPPRESSION_ZONE'; zoneId: string }
   | { type: 'SET_FIRE_BEHAVIOR'; behavior: FireBehaviorState }
   | { type: 'RESET' };
 
@@ -115,6 +137,7 @@ const initialState: MapState = {
   closedRoutes: new Set<string>(),
   shelters: {},
   resources: [],
+  resourceGroups: {},
   infrastructure: {},
   evacuationFlows: [],
   tripWaypoints: [],
@@ -171,7 +194,7 @@ function mapReducer(state: MapState, action: MapAction): MapState {
       };
 
     case 'DEPLOY_RESOURCE': {
-      const incoming = { type: action.resourceType, location: action.location, count: action.count };
+      const incoming = { id: action.groupId, type: action.resourceType, location: action.location, count: action.count };
       const isDozer = incoming.type.toLowerCase().includes('dozer');
       const mergeDistanceKm = isDozer ? 0.03 : 0.04;
       const maxVisibleByType = isDozer ? 18 : 36;
@@ -180,9 +203,11 @@ function mapReducer(state: MapState, action: MapAction): MapState {
         const lngKm = (b[0] - a[0]) * 111.32 * Math.cos(((a[1] + b[1]) / 2) * Math.PI / 180);
         return Math.sqrt(latKm * latKm + lngKm * lngKm);
       };
-      const idx = state.resources.findIndex(r =>
-        r.type === incoming.type && distanceKm(r.location, incoming.location) <= mergeDistanceKm
-      );
+      const idx = incoming.id
+        ? state.resources.findIndex(r => r.id === incoming.id)
+        : state.resources.findIndex(r =>
+          r.type === incoming.type && distanceKm(r.location, incoming.location) <= mergeDistanceKm
+        );
       const merged = state.resources.slice();
       if (idx >= 0) merged[idx] = incoming;
       else merged.push(incoming);
@@ -196,6 +221,25 @@ function mapReducer(state: MapState, action: MapAction): MapState {
       });
       return { ...state, resources: next };
     }
+
+    case 'UPSERT_RESOURCE_GROUP':
+      return {
+        ...state,
+        resourceGroups: {
+          ...state.resourceGroups,
+          [action.group.id]: action.group,
+        },
+      };
+
+    case 'REMOVE_RESOURCE':
+      return {
+        ...state,
+        resources: state.resources.filter(r => r.id !== action.groupId),
+        resourceDispatches: state.resourceDispatches.filter(d => d.groupId !== action.groupId),
+        resourceGroups: Object.fromEntries(
+          Object.entries(state.resourceGroups).filter(([id]) => id !== action.groupId),
+        ),
+      };
 
     case 'SET_INFRASTRUCTURE':
       return {
@@ -266,11 +310,25 @@ function mapReducer(state: MapState, action: MapAction): MapState {
     case 'SET_PARTICLES':
       return { ...state, particles: action.particles };
 
-    case 'ADD_RESOURCE_DISPATCH':
-      return { ...state, resourceDispatches: [...state.resourceDispatches, action.dispatch] };
+    case 'ADD_RESOURCE_DISPATCH': {
+      const now = Date.now();
+      // Prune entries that have been completed for more than 5 seconds to prevent unbounded growth
+      const maxAge = 5000;
+      const active = state.resourceDispatches.filter(d => {
+        const duration = d.durationMs ?? 24000;
+        return (now - d.startedAt) < duration + maxAge;
+      });
+      return { ...state, resourceDispatches: [...active, action.dispatch] };
+    }
 
     case 'PRUNE_RESOURCE_DISPATCHES': {
       const keep = state.resourceDispatches.filter(d => d.startedAt >= action.olderThan);
+      if (keep.length === state.resourceDispatches.length) return state;
+      return { ...state, resourceDispatches: keep };
+    }
+
+    case 'COMPLETE_RESOURCE_DISPATCH': {
+      const keep = state.resourceDispatches.filter(d => d.groupId !== action.groupId);
       if (keep.length === state.resourceDispatches.length) return state;
       return { ...state, resourceDispatches: keep };
     }
@@ -292,9 +350,16 @@ function mapReducer(state: MapState, action: MapAction): MapState {
         ...state,
         suppressionZones: {
           ...state.suppressionZones,
-          [action.zone.id]: action.zone,
+          [action.zone.id]: { ...action.zone, arrivedAt: Date.now() },
         }
       };
+
+    case 'REMOVE_SUPPRESSION_ZONE': {
+      if (!state.suppressionZones[action.zoneId]) return state;
+      const next = { ...state.suppressionZones };
+      delete next[action.zoneId];
+      return { ...state, suppressionZones: next };
+    }
 
     case 'SET_FIRE_BEHAVIOR':
       return { ...state, fireBehavior: action.behavior };
@@ -309,6 +374,7 @@ function mapReducer(state: MapState, action: MapAction): MapState {
         alerts: [],
         particles: [],
         resourceDispatches: [],
+        resourceGroups: {},
         recentActions: [],
         suppressionZones: {},
         fireBehavior: null,

@@ -12,6 +12,13 @@ function isLngLatPath(value: unknown): value is [number, number][] {
   );
 }
 
+function isLngLat(value: unknown): value is [number, number] {
+  return Array.isArray(value) &&
+    value.length >= 2 &&
+    typeof value[0] === 'number' &&
+    typeof value[1] === 'number';
+}
+
 /**
  * Translates a MapEventData from the server into a dispatch call
  * for the useMapState reducer.
@@ -61,14 +68,29 @@ export function dispatchMapEvent(
       });
       break;
     case 'deploy_resource': {
+      if (event.count <= 0) break;
       const durationMs = typeof event.travel_hours === 'number'
         ? Math.max(4000, event.travel_hours * SIM_HOUR_TO_DISPATCH_MS)
         : undefined;
+      const groupId = event.resource_group_id ?? event.action_id ?? `${event.from_station_id ?? 'station'}-${event.resource_type}`;
+      dispatch({
+        type: 'UPSERT_RESOURCE_GROUP',
+        group: {
+          id: groupId,
+          type: event.resource_type,
+          count: event.count,
+          status: 'dispatching',
+          location: event.from_location,
+          destination: event.location,
+          progress: 0,
+        },
+      });
       if (Array.isArray(event.from_location) && event.from_location.length === 2) {
         dispatch({
           type: 'ADD_RESOURCE_DISPATCH',
           dispatch: {
-            id: `${event.action_id ?? event.from_station_id ?? 'station'}-${event.resource_type}-${Date.now()}`,
+            id: `${groupId}-${Date.now()}`,
+            groupId,
             type: event.resource_type,
             from: event.from_location,
             to: event.location,
@@ -78,14 +100,109 @@ export function dispatchMapEvent(
           },
         });
       }
-      window.setTimeout(() => {
+
+      // Auto-deploy the green icon + suppression zone when the travel animation finishes.
+      // This is independent of the backend resource_update — ensures icons and work visuals
+      // always appear even if the backend event is delayed or lost.
+      const deployDelay = durationMs ?? 4000;
+      const loc = event.location;
+      const resType = event.resource_type;
+      const cnt = event.count;
+      setTimeout(() => {
+        dispatch({ type: 'COMPLETE_RESOURCE_DISPATCH', groupId });
+        if (isLngLat(loc)) {
+          dispatch({
+            type: 'DEPLOY_RESOURCE',
+            resourceType: resType,
+            location: loc,
+            count: cnt,
+            groupId,
+          });
+          // Show a visual suppression zone so the user sees the resource is working.
+          // Dozers get a containment line, engines get a small work area.
+          const isDozer = resType.toLowerCase().includes('dozer');
+          const zoneId = `${groupId}-suppression`;
+          if (isDozer) {
+            // Dozer containment line — short line segment perpendicular to fire bearing
+            const lineLen = 0.012; // ~1.3km in degrees
+            dispatch({
+              type: 'ADD_SUPPRESSION_ZONE',
+              zone: {
+                id: zoneId,
+                geojson: {
+                  type: 'Feature',
+                  properties: { type: 'dozer_line', resource_type: 'dozer' },
+                  geometry: {
+                    type: 'LineString',
+                    coordinates: [
+                      [loc[0] - lineLen / 2, loc[1]],
+                      [loc[0] + lineLen / 2, loc[1]],
+                    ],
+                  },
+                },
+                resource_type: 'dozer',
+                effectiveness: 0.88,
+                progress: 1,
+                line_progress: 1,
+                effect_type: 'dozer_line',
+              },
+            });
+          } else {
+            // Engine work area — small circle around position
+            const r = 0.003; // ~330m in degrees
+            const pts = 16;
+            const ring = Array.from({ length: pts + 1 }, (_, i) => {
+              const a = (i / pts) * 2 * Math.PI;
+              return [loc[0] + r * Math.cos(a), loc[1] + r * Math.sin(a) * 0.85];
+            });
+            dispatch({
+              type: 'ADD_SUPPRESSION_ZONE',
+              zone: {
+                id: zoneId,
+                geojson: {
+                  type: 'Feature',
+                  properties: { resource_type: 'engine' },
+                  geometry: { type: 'Polygon', coordinates: [ring] },
+                },
+                resource_type: 'engine',
+                effectiveness: 0.65,
+                progress: 0,
+                effect_type: 'engine_area',
+              },
+            });
+          }
+        }
+      }, deployDelay);
+      break;
+    }
+    case 'resource_update': {
+      dispatch({
+        type: 'UPSERT_RESOURCE_GROUP',
+        group: {
+          id: event.resource_group_id,
+          type: event.resource_type,
+          count: event.count,
+          status: event.status,
+          location: event.location,
+          destination: event.destination,
+          assignment_id: event.assignment_id,
+          assignment_type: event.assignment_type,
+          progress: event.progress,
+        },
+      });
+      if ((event.status === 'staged' || event.status === 'working') && isLngLat(event.location)) {
+        dispatch({ type: 'COMPLETE_RESOURCE_DISPATCH', groupId: event.resource_group_id });
         dispatch({
           type: 'DEPLOY_RESOURCE',
           resourceType: event.resource_type,
           location: event.location,
           count: event.count,
+          groupId: event.resource_group_id,
         });
-      }, durationMs ?? 0);
+      }
+      if (event.status === 'released' || event.status === 'failed') {
+        dispatch({ type: 'REMOVE_RESOURCE', groupId: event.resource_group_id });
+      }
       break;
     }
     case 'suppression_zone':
@@ -97,8 +214,14 @@ export function dispatchMapEvent(
           visual_geojson: event.visual_geojson,
           effectiveness: event.effectiveness,
           resource_type: event.resource_type,
+          progress: event.progress,
+          line_progress: event.line_progress,
+          effect_type: event.effect_type,
         },
       });
+      break;
+    case 'remove_suppression_zone':
+      dispatch({ type: 'REMOVE_SUPPRESSION_ZONE', zoneId: event.suppression_zone_id });
       break;
     case 'fire_behavior':
       dispatch({

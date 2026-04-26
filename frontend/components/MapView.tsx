@@ -41,6 +41,7 @@ interface DispatchMoving {
 
 interface DispatchPath {
   id: string;
+  groupId?: string;
   type: string;
   path: [number, number][];
   durationMs: number;
@@ -217,8 +218,9 @@ const ZONE_LINE_COLORS: Record<ZoneStatus, [number, number, number, number]> = {
 const ANIM_LOOP_LENGTH = 1800;
 /** How many animation units to advance per millisecond */
 const ANIM_SPEED = 0.03; // 1800 units ÷ 0.03 = 60,000 ms = 60 seconds per full loop
-/** Must match PHYSICS_INTERVAL_MS in backend/orchestration/turnSequencer.js */
-const PHYSICS_INTERVAL_MS = 500;
+/** Must match the fire_update send interval in the backend physics loop
+ *  (PHYSICS_INTERVAL_MS × 4 = 2000ms since fire is only sent every 4th tick) */
+const FIRE_UPDATE_INTERVAL_MS = 2000;
 
 // ── Sub-component for DeckGL to isolate animation re-renders ────────────────
 const MapOverlay = memo(function MapOverlay({
@@ -271,17 +273,16 @@ const MapOverlay = memo(function MapOverlay({
       lastTsRef.current = ts;
       setAnimTime(prev => (prev + delta * ANIM_SPEED) % ANIM_LOOP_LENGTH);
 
-      // Throttle wallClockMs to ~10fps — dispatch/pulse position memos only recompute
-      // when this changes, so limiting it to 10fps cuts their work by ~6×
+      // Throttle wallClockMs to ~30fps — smooth enough for truck markers and suppression fade-in
       frameCountRef.current += 1;
-      if (frameCountRef.current % 6 === 0) {
+      if (frameCountRef.current % 2 === 0) {
         setWallClockMs(Date.now());
       }
 
       // Lerp fire perimeter vertices between physics ticks for smooth 60fps expansion
       const elapsed = Date.now() - perimUpdateTimeRef.current;
-      if (elapsed < PHYSICS_INTERVAL_MS) {
-        const t = elapsed / PHYSICS_INTERVAL_MS;
+      if (elapsed < FIRE_UPDATE_INTERVAL_MS) {
+        const t = elapsed / FIRE_UPDATE_INTERVAL_MS;
         const lerped = lerpPerimeter(prevPerimRef.current, nextPerimRef.current, t);
         lerpedPerimRef.current = lerped;
         setLerpedPerimeter(lerped);
@@ -318,6 +319,7 @@ const MapOverlay = memo(function MapOverlay({
     const highwayCoords = routeCoordinates(mapState.routeFeatures);
     return dispatches.map(d => ({
       id: d.id,
+      groupId: d.groupId,
       type: d.type,
       path: d.path && d.path.length >= 2 ? d.path : buildDispatchPath(d.from, d.to, highwayCoords),
       durationMs: d.durationMs ?? 24000,
@@ -332,82 +334,76 @@ const MapOverlay = memo(function MapOverlay({
     [mapState.tripWaypoints, animTime],
   );
 
-  const dispatchLayers = useMemo(() => {
+  // Stable path layer — only rebuilds when dispatch list changes, not on every frame
+  const staticDispatchPathLayer = useMemo(() => {
+    if (dispatchPaths.length === 0) return null;
+    return new PathLayer<DispatchPath>({
+      id: 'resource-dispatch-paths',
+      data: dispatchPaths,
+      getPath: (d) => d.path,
+      getColor: (d) => d.type === 'dozer' ? [250, 204, 21, 230] : [239, 68, 68, 235],
+      getWidth: 2,
+      widthUnits: 'pixels',
+      rounded: true,
+      billboard: true,
+    });
+  }, [dispatchPaths]);
+
+  // Animated marker layers — rebuilds at ~30fps for smooth truck position updates
+  const movingMarkersLayers = useMemo(() => {
     if (dispatchPaths.length === 0) return [];
     const moving: DispatchMoving[] = dispatchPaths
       .map(d => {
         const t = Math.min(1, Math.max(0, (wallClockMs - d.startedAt) / d.durationMs));
         return { id: d.id, type: d.type, path: d.path, position: interpolatePath(d.path, t), t };
-      })
-      .filter(d => d.t < 1);
-    const layers: Layer[] = [
-      new PathLayer<DispatchPath>({
-        id: 'resource-dispatch-paths',
-        data: dispatchPaths,
-        getPath: (d) => d.path,
-        getColor: (d) => d.type === 'dozer' ? [250, 204, 21, 230] : [239, 68, 68, 235],
-        getWidth: 5,
-        widthUnits: 'pixels',
-        rounded: true,
+      });
+    if (moving.length === 0) return [];
+    return [
+      new ScatterplotLayer<DispatchMoving>({
+        id: 'resource-dispatch-markers',
+        data: moving,
+        getPosition: (d) => d.position,
+        getRadius: 16,
+        getFillColor: (d) => d.type === 'dozer' ? [250, 204, 21, 255] : [239, 68, 68, 255],
+        getLineColor: [255, 255, 255, 255],
+        lineWidthMinPixels: 2,
+        stroked: true,
+        radiusUnits: 'pixels',
+        updateTriggers: { getPosition: wallClockMs },
+      }),
+      new TextLayer<DispatchMoving>({
+        id: 'resource-dispatch-truck-icons',
+        data: moving,
+        getPosition: (d) => d.position,
+        getText: (d) => d.type === 'dozer' ? 'DZR' : '🚒',
+        getSize: (d) => d.type === 'dozer' ? 12 : 22,
+        getColor: [255, 255, 255, 255],
+        getTextAnchor: 'middle',
+        getAlignmentBaseline: 'center',
         billboard: true,
+        sizeUnits: 'pixels',
+        updateTriggers: { getPosition: wallClockMs },
       }),
     ];
-
-    if (moving.length > 0) {
-      layers.push(
-        new ScatterplotLayer<DispatchMoving>({
-          id: 'resource-dispatch-markers',
-          data: moving,
-          getPosition: (d) => d.position,
-          getRadius: 16,
-          getFillColor: (d) => d.type === 'dozer' ? [250, 204, 21, 255] : [239, 68, 68, 255],
-          getLineColor: [255, 255, 255, 255],
-          lineWidthMinPixels: 2,
-          stroked: true,
-          radiusUnits: 'pixels',
-          updateTriggers: { getPosition: wallClockMs },
-        }),
-        new TextLayer<DispatchMoving>({
-          id: 'resource-dispatch-truck-icons',
-          data: moving,
-          getPosition: (d) => d.position,
-          getText: (d) => d.type === 'dozer' ? 'DZR' : '🚒',
-          getSize: (d) => d.type === 'dozer' ? 12 : 22,
-          getColor: [255, 255, 255, 255],
-          getTextAnchor: 'middle',
-          getAlignmentBaseline: 'center',
-          billboard: true,
-          sizeUnits: 'pixels',
-          updateTriggers: { getPosition: wallClockMs },
-        }),
-      );
-    }
-
-    return layers;
   }, [dispatchPaths, wallClockMs]);
 
   const suppressionLayer = useMemo(() => {
     const zones = Object.values(mapState.suppressionZones);
     if (zones.length === 0) return null;
     const features = zones.flatMap((zone): SuppressionFeature[] => {
+      const age = zone.arrivedAt != null ? wallClockMs - zone.arrivedAt : 2000;
+      const fade = Math.min(1, age / 2000);
       const displayGeojson = zone.visual_geojson ?? zone.geojson;
+      const toFeature = (f: GeoJSON.Feature | GeoJSON.Geometry): SuppressionFeature => {
+        if ('type' in f && f.type === 'Feature') {
+          return { ...(f as GeoJSON.Feature), properties: { ...((f as GeoJSON.Feature).properties ?? {}), ...zone, _fade: fade } };
+        }
+        return { type: 'Feature', properties: { ...zone, _fade: fade }, geometry: f as GeoJSON.Geometry };
+      };
       if (displayGeojson.type === 'FeatureCollection') {
-        return displayGeojson.features.map((feature) => ({
-          ...feature,
-          properties: { ...(feature.properties ?? {}), ...zone },
-        }));
+        return (displayGeojson as GeoJSON.FeatureCollection).features.map(toFeature);
       }
-      if (displayGeojson.type === 'Feature') {
-        return [{
-          ...displayGeojson,
-          properties: { ...(displayGeojson.properties ?? {}), ...zone },
-        }];
-      }
-      return [{
-        type: 'Feature',
-        properties: zone,
-        geometry: displayGeojson,
-      }];
+      return [toFeature(displayGeojson as GeoJSON.Feature | GeoJSON.Geometry)];
     });
 
     return new GeoJsonLayer<SuppressionFeature>({
@@ -416,17 +412,23 @@ const MapOverlay = memo(function MapOverlay({
       filled: true,
       stroked: true,
       getFillColor: (d) => {
-        const type = suppressionResourceType(d);
-        return type.includes('dozer') ? [250, 204, 21, 0] : [34, 197, 94, 26];
+        const t = suppressionResourceType(d);
+        const f = (d.properties as { _fade?: number })?._fade ?? 1;
+        return t.includes('dozer') ? [250, 204, 21, 0] : [34, 197, 94, Math.round(26 * f)];
       },
       getLineColor: (d) => {
-        const type = suppressionResourceType(d);
-        return type.includes('dozer') ? [250, 204, 21, 235] : [34, 197, 94, 120];
+        const t = suppressionResourceType(d);
+        const f = (d.properties as { _fade?: number })?._fade ?? 1;
+        return t.includes('dozer') ? [250, 204, 21, Math.round(235 * f)] : [34, 197, 94, Math.round(120 * f)];
       },
       getLineWidth: (d) => suppressionResourceType(d).includes('dozer') ? 5 : 2,
       lineWidthUnits: 'pixels',
+      updateTriggers: {
+        getFillColor: wallClockMs,
+        getLineColor: wallClockMs,
+      },
     });
-  }, [mapState.suppressionZones]);
+  }, [mapState.suppressionZones, wallClockMs]);
 
   const actionPulseLayer = useMemo(() => {
     const actions = mapState.recentActions;
@@ -518,9 +520,10 @@ const MapOverlay = memo(function MapOverlay({
     fireLayer,
     suppressionLayer,
     tripsLayer,
-    ...dispatchLayers,
+    staticDispatchPathLayer,
+    ...movingMarkersLayers,
     ...(Array.isArray(actionPulseLayer) ? actionPulseLayer : [actionPulseLayer]),
-  ].filter((l): l is Layer => l !== null), [staticLayers, fireLayer, suppressionLayer, tripsLayer, dispatchLayers, actionPulseLayer]);
+  ].filter((l): l is Layer => l !== null), [staticLayers, fireLayer, suppressionLayer, tripsLayer, staticDispatchPathLayer, movingMarkersLayers, actionPulseLayer]);
 
   return (
     <DeckGL

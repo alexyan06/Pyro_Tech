@@ -65,11 +65,12 @@ class TurnSequencer {
     this._agentRunCount = 0;
     this._logicalElapsedHours = 0;
     this._lastElapsedHours = 0;
+    this._physicsElapsedHours = 0;
     this._lastTrafficSignature = '';
-    this._cycleStartElapsedHours = 0;
-    this._cycleTargetElapsedHours = 0;
-    this._cycleStartWallMs = Date.now();
     this._lastImpactSignature = '';
+    // Monotonic sim clock — advances at a constant rate regardless of agent latency
+    this._simStartWallMs    = Date.now();
+    this._physicsHoursPerMs = (LOGICAL_MINUTES_PER_CYCLE / 60) / DEMO_AGENT_CYCLE_MS;
 
     this.stateManager.seedFromScenario(scenarioInput);
 
@@ -153,9 +154,42 @@ class TurnSequencer {
       const simTime = new Date(simStartSim.getTime() + elapsedSimHours * 3_600_000);
       const simTimeStr = simTime.toISOString();
 
-      // Fire perimeter (grows continuously)
+      // Heartbeat log every ~10s so we can verify the physics loop is alive
+      if (physicsCount % 20 === 0) {
+        const groupCount = Object.keys(this.stateManager.state.resources.groups || {}).length;
+        console.log(`[Physics] tick=${physicsCount} elapsed=${elapsedSimHours.toFixed(3)}h groups=${groupCount}`);
+      }
+
+      // Resource status updates + suppression zone geometry — MUST run before
+      // getActiveSuppressionEffects so a newly-arrived group's zone is included
+      // in the same tick's fire perimeter calculation (no 1-tick blind spot).
+      if (physicsCount % 4 === 0) {
+        const resourceEvents = this.stateManager.updateResources(elapsedSimHours);
+        for (let i = 0; i < resourceEvents.length; i++) {
+          const event = {
+            ...resourceEvents[i],
+            action_id: resourceEvents[i].action_id || `resource-effect-${this._agentRunCount}-${physicsCount}-${i}`,
+            source_agent: 'resource',
+            agent: 'resource',
+            tick: this._agentRunCount,
+            elapsed_hours: elapsedSimHours,
+          };
+          if (event.type === 'resource_update') {
+            console.log(`[Physics] Resource ${event.resource_group_id} → ${event.status} at ${elapsedSimHours.toFixed(3)}h`);
+          }
+          if (event.type === 'suppression_zone') {
+            console.log(`[Physics] Suppression zone ${event.action_id} type=${event.resource_type} at ${elapsedSimHours.toFixed(3)}h`);
+          }
+          this._sendMapEvent(ws, 'resource', event, this._agentRunCount);
+        }
+      }
+
+      // Fetch suppression effects AFTER updateResources so newly-arrived groups are included
       let perimeter;
-      const suppressionZones = this.stateManager.state.fire.suppression_zones || [];
+      const suppressionEffects = this.stateManager.getActiveSuppressionEffects(elapsedSimHours);
+      if (physicsCount % 20 === 0 && suppressionEffects.length > 0) {
+        console.log(`[Physics] Fire engine using ${suppressionEffects.length} active suppression effect(s)`);
+      }
       if (historicalPerimeters) {
         const approxTick = Math.max(1, Math.min(MAX_TICKS, Math.ceil(elapsedSimHours)));
         const stage = historicalPerimeters.features.find(f => f.properties.tick === approxTick)
@@ -164,23 +198,25 @@ class TurnSequencer {
           perimeter = engine.applySuppressionToPerimeter(
             { type: 'FeatureCollection', features: [stage] },
             Math.max(0.01, elapsedSimHours),
-            suppressionZones,
+            suppressionEffects,
           );
         } else {
-          perimeter = engine.generatePerimeter(Math.max(0.01, elapsedSimHours), suppressionZones);
+          perimeter = engine.generatePerimeter(Math.max(0.01, elapsedSimHours), suppressionEffects);
         }
       } else {
-        perimeter = engine.generatePerimeter(Math.max(0.01, elapsedSimHours), suppressionZones);
+        perimeter = engine.generatePerimeter(Math.max(0.01, elapsedSimHours), suppressionEffects);
       }
       this.stateManager.applyEvent({ type: 'update_fire_perimeter', geojson: perimeter });
-      this._sendMapEvent(ws, 'disaster', { type: 'fire_update', geojson: perimeter }, this._agentRunCount);
 
+      // Only send the heavy fire GeoJSON to the client periodically (every 2 seconds)
+      // to keep the WebSocket and event loop clear for the clock + other updates.
       if (physicsCount % 4 === 0) {
+        this._sendMapEvent(ws, 'disaster', { type: 'fire_update', geojson: perimeter }, this._agentRunCount);
         this._sendMapEvent(ws, 'disaster', this._buildFireBehaviorEvent(perimeter, elapsedSimHours), this._agentRunCount);
         this._refreshFireImpacts(ws, elapsedSimHours, this._agentRunCount);
       }
 
-      // Continuous simulation clock
+      // Continuous simulation clock — lightweight, sent every tick
       this.sendToClient(ws, {
         type: 'time_update',
         payload: { sim_time: simTimeStr, elapsed_hours: elapsedSimHours, duration_hours: durationHours },
@@ -244,10 +280,7 @@ class TurnSequencer {
         if (this.stopped) break;
 
         this._agentRunCount++;
-        this._cycleStartElapsedHours = this._lastElapsedHours;
         this._logicalElapsedHours = Math.min(durationHours, this._agentRunCount * LOGICAL_MINUTES_PER_CYCLE / 60);
-        this._cycleTargetElapsedHours = this._logicalElapsedHours;
-        this._cycleStartWallMs = Date.now();
         const simTimeStr = new Date(simStartSim.getTime() + this._logicalElapsedHours * 3_600_000).toISOString();
         console.log(`[Sequencer] Agent Run ${this._agentRunCount}/${totalCycles} — ${formatElapsedHours(this._logicalElapsedHours)} (${simTimeStr})`);
 
@@ -304,6 +337,7 @@ class TurnSequencer {
 
     // Guarantee at least one evacuation flow per cycle so cars/particles have something to animate.
     this._ensureEvacuationFlow(ws, agentRun, elapsedHours);
+    await new Promise(r => setImmediate(r)); // yield for physics
 
     if (this.stopped) return;
     await this._interruptibleDelay(800);
@@ -321,7 +355,7 @@ class TurnSequencer {
       this._buildContext(scenarioInput, agentRun, simTimeStr, elapsedHours, weather, cycleOutputs),
       ws, agentRun, elapsedHours,
     );
-    this._ensureGroundResourceDeployment(ws, resourceOut, agentRun, elapsedHours);
+    await this._ensureGroundResourceDeployment(ws, resourceOut, agentRun, elapsedHours);
     cycleOutputs.push(resourceOut);
 
     if (this.stopped) return;
@@ -341,11 +375,12 @@ class TurnSequencer {
   }
 
   _currentPhysicsElapsedHours(durationHours) {
-    const start = this._cycleStartElapsedHours || 0;
-    const target = this._cycleTargetElapsedHours || this._logicalElapsedHours || 0;
-    if (target <= start) return Math.min(durationHours, target);
-    const progress = Math.min(1, Math.max(0, (Date.now() - this._cycleStartWallMs) / DEMO_AGENT_CYCLE_MS));
-    return Math.min(durationHours, start + (target - start) * progress);
+    // Fixed delta per tick — ensures consistent pacing that doesn't outrun the agent loop.
+    // Each 500ms tick advances sim time by a visible amount for smooth fire growth.
+    // Rate: LOGICAL_MINUTES_PER_CYCLE (30 min) over DEMO_AGENT_CYCLE_MS (30s) = 1 sim min per real second.
+    const deltaHours = (PHYSICS_INTERVAL_MS / DEMO_AGENT_CYCLE_MS) * (LOGICAL_MINUTES_PER_CYCLE / 60);
+    this._physicsElapsedHours = (this._physicsElapsedHours || 0) + deltaHours;
+    return Math.min(durationHours, this._physicsElapsedHours);
   }
 
   async _interruptibleDelay(ms) {
@@ -368,8 +403,14 @@ class TurnSequencer {
     }
     this._sendAgentText(ws, agent.name, '', true);
 
+    // Yield to let physics loop fire before heavy sync processing
+    await new Promise(r => setImmediate(r));
+
     const mapEvents = agent.extractMapEvents(fullText);
     for (let i = 0; i < mapEvents.length; i++) {
+      // Yield between each event so physics loop can fire
+      if (i > 0) await new Promise(r => setImmediate(r));
+
       const event = mapEvents[i];
       const eventsToApply = event.type === 'deploy_resource'
         ? this._expandResourceDeployment(event, i, elapsedHours)
@@ -377,9 +418,10 @@ class TurnSequencer {
 
       for (let j = 0; j < eventsToApply.length; j++) {
         const expandedEvent = eventsToApply[j];
+        const physicsTime = this._physicsElapsedHours;
         if (expandedEvent.type === 'deploy_resource') {
           this._normalizeResourceDeployment(expandedEvent, i + j);
-          this._attachDispatchPlan(expandedEvent, elapsedHours);
+          this._attachDispatchPlan(expandedEvent, physicsTime);
         }
         const enrichedEvent = {
           ...expandedEvent,
@@ -389,13 +431,16 @@ class TurnSequencer {
           action_location: expandedEvent.action_location || this._actionLocationForEvent(expandedEvent),
           agent: agent.name,
           tick,
-          elapsed_hours: elapsedHours,
+          elapsed_hours: physicsTime,
         };
         const derivedEvents = this.stateManager.applyEvent(enrichedEvent) || [];
         this._sendMapEvent(ws, agent.name, enrichedEvent, tick);
-        this._sendDerivedMapEvents(ws, agent.name, enrichedEvent, derivedEvents, tick, elapsedHours);
+        this._sendDerivedMapEvents(ws, agent.name, enrichedEvent, derivedEvents, tick, physicsTime);
       }
     }
+
+    // Yield again after all events applied
+    await new Promise(r => setImmediate(r));
 
     this.stateManager.state.agent_transcripts.push({
       cycle: tick,
@@ -417,7 +462,7 @@ class TurnSequencer {
     return { agent: agent.name, text: fullText, mapEvents };
   }
 
-  _ensureGroundResourceDeployment(ws, resourceOut, tick, elapsedHours) {
+  async _ensureGroundResourceDeployment(ws, resourceOut, tick, elapsedHours) {
     const emittedTypes = new Set(
       (resourceOut?.mapEvents || [])
         .filter(event => event.type === 'deploy_resource')
@@ -426,9 +471,13 @@ class TurnSequencer {
     const neededTypes = ['engine', 'dozer'].filter(type => !emittedTypes.has(type));
     if (neededTypes.length === 0) return;
 
-    neededTypes.forEach((type) => {
+    for (const type of neededTypes) {
       const deployments = this._plannedResourceDeployments(type, elapsedHours);
-      deployments.forEach((deployment, index) => {
+      for (let index = 0; index < deployments.length; index++) {
+        // Yield between deployments so physics loop can fire
+        if (index > 0) await new Promise(r => setImmediate(r));
+        const deployment = deployments[index];
+        const physicsTime = this._physicsElapsedHours;
         const event = {
           type: 'deploy_resource',
           resource_type: type,
@@ -443,15 +492,16 @@ class TurnSequencer {
           action_location: deployment.location,
           agent: 'resource',
           tick,
-          elapsed_hours: elapsedHours,
+          elapsed_hours: physicsTime,
           _unit_index: index,
         };
-        this._attachDispatchPlan(event, elapsedHours);
+        this._attachDispatchPlan(event, physicsTime);
+        console.log(`[Resource] Deployed ${type} group=${event.resource_group_id || event.action_id} physics=${physicsTime.toFixed(3)}h arrival=${event.arrival_elapsed_hours}h travel=${event.travel_hours}h`);
         const derivedEvents = this.stateManager.applyEvent(event) || [];
         this._sendMapEvent(ws, 'resource', event, tick);
-        this._sendDerivedMapEvents(ws, 'resource', event, derivedEvents, tick, elapsedHours);
-      });
-    });
+        this._sendDerivedMapEvents(ws, 'resource', event, derivedEvents, tick, physicsTime);
+      }
+    }
   }
 
   _expandResourceDeployment(event, index, elapsedHours) {
@@ -491,7 +541,7 @@ class TurnSequencer {
       this._isLocationInFire(event.from_location);
 
     if (!Array.isArray(event.from_location) || event.from_location.length !== 2 || fromInFire) {
-      const station = this._nearestFireStation(event.location);
+      const station = this._nearestFireStation(event.location, new Set(), event.resource_type);
       event.from_station_id = station.id;
       event.from_location = [station.lng, station.lat];
     }
@@ -503,21 +553,36 @@ class TurnSequencer {
   }
 
   _plannedResourceDeployments(resourceType, elapsedHours = 0, requestedCount = null) {
-    const totalCount = Math.max(1, Number(requestedCount) || this._resourceCountFor(resourceType, elapsedHours));
-    const maxUnits = resourceType === 'dozer' ? 18 : 36;
-    const units = Math.min(maxUnits, totalCount);
+    const availableTotal = this._availableResourceTotal(resourceType);
+    if (availableTotal <= 0) return [];
+    const desiredCount = Math.max(1, Number(requestedCount) || this._resourceCountFor(resourceType, elapsedHours));
+    const totalCount = Math.min(desiredCount, availableTotal);
+    // Scale dispatch groups sub-linearly with total count so larger fires send more
+    // visible strike teams while keeping animations and suppression zones manageable.
+    // Each group carries count = totalCount / units so resource numbers stay accurate.
+    const maxUnits = resourceType === 'dozer' ? 5 : 7;
+    const units = Math.min(maxUnits, Math.max(1, Math.ceil(Math.sqrt(totalCount / 3))));
     const usedStations = new Set();
 
     return Array.from({ length: units }, (_, index) => {
       const location = this._resourceStagingPoint(resourceType, index);
-      const station = this._nearestFireStation(location, usedStations);
+      const station = this._nearestFireStation(location, usedStations, resourceType);
       if (usedStations.size < 8) usedStations.add(station.id);
       return {
         location,
         station,
-        count: 1,
+        count: Math.max(1, Math.round(totalCount / units)),
       };
     });
+  }
+
+  _availableResourceTotal(resourceType) {
+    const stations = Object.values(this.stateManager.state.resources?.stations || {});
+    if (stations.length === 0) return Infinity;
+    const key = resourceType === 'dozer' ? 'dozers_available' : 'engines_available';
+    return stations
+      .filter(station => this._canStationDispatch(station, resourceType))
+      .reduce((sum, station) => sum + Math.max(0, Math.round(Number(station[key]) || 0)), 0);
   }
 
   _attachDispatchPlan(event, elapsedHours) {
@@ -577,11 +642,28 @@ class TurnSequencer {
     return this._dedupePath([from, [west - pad, north + pad], [east + pad, north + pad], to]);
   }
 
-  _pathIntersectsFire(pathCoords) {
+  _getBufferedFirePerimeter() {
     const perim = this.stateManager.state.fire.perimeter_geojson?.features?.[0];
-    if (!perim || !Array.isArray(pathCoords) || pathCoords.length < 2) return false;
+    if (!perim) return null;
+    // Cache the buffered perimeter — regenerate only when the perimeter object changes
+    const perimKey = perim.properties?.tick ?? perim.properties?.acres ?? 0;
+    if (this._cachedFireBuffer && this._cachedFireBufferKey === perimKey) {
+      return this._cachedFireBuffer;
+    }
     try {
-      const buffered = turf.buffer(perim, 0.15, { units: 'kilometers' });
+      this._cachedFireBuffer = turf.buffer(perim, 0.15, { units: 'kilometers' });
+      this._cachedFireBufferKey = perimKey;
+      return this._cachedFireBuffer;
+    } catch (_) {
+      return perim; // fallback to raw perimeter
+    }
+  }
+
+  _pathIntersectsFire(pathCoords) {
+    if (!Array.isArray(pathCoords) || pathCoords.length < 2) return false;
+    const buffered = this._getBufferedFirePerimeter();
+    if (!buffered) return false;
+    try {
       const line = turf.lineString(pathCoords);
       return turf.booleanIntersects(line, buffered) ||
         pathCoords.some(coord => turf.booleanPointInPolygon(turf.point(coord), buffered));
@@ -618,23 +700,24 @@ class TurnSequencer {
     const windBearing = props.wind_bearing || this.stateManager.state.fire.spread_bearing || 0;
     const perimeterReady = fireFeature?.geometry?.type === 'Polygon';
 
-    if (resourceType === 'dozer' && perimeterReady) {
-      const offsets = [0, 8, -8, 16, -16, 24, -24, 32, -32, 40, -40, 48, -48, 56, -56, 64, -64, 72];
-      const bearing = (windBearing + offsets[index % offsets.length] + 360) % 360;
-      const edge = this._perimeterPointAtBearing(fireFeature, bearing);
-      if (edge) return this._pointAtBearingAndDistance(edge, bearing, 0.55 + Math.floor(index / offsets.length) * 0.12);
-    }
+    // Distribute evenly across 360 degrees. Dozers start at wind head, engines start at tail.
+    const spreadAngle = 360 / 8; // Distribute at 45 degree intervals
+    const baseBearing = resourceType === 'dozer' ? windBearing : (windBearing + 180) % 360;
+    
+    // index 0 -> 0, index 1 -> +45, index 2 -> -45, index 3 -> +90, etc.
+    const sign = index % 2 === 0 ? 1 : -1;
+    const mag = Math.ceil(index / 2) * spreadAngle;
+    const bearing = (baseBearing + sign * mag + 360) % 360;
 
-    if (resourceType === 'engine' && perimeterReady) {
-      const flankOffsets = [90, -90, 105, -105, 75, -75, 120, -120, 60, -60, 135, -135, 45, -45, 150, -150];
-      const bearing = (windBearing + flankOffsets[index % flankOffsets.length] + 360) % 360;
+    if (perimeterReady) {
       const edge = this._perimeterPointAtBearing(fireFeature, bearing);
-      if (edge) return this._pointAtBearingAndDistance(edge, bearing, 0.5 + Math.floor(index / flankOffsets.length) * 0.08);
+      if (edge) {
+        return this._pointAtBearingAndDistance(edge, bearing, 0.3 + (index % 3) * 0.08);
+      }
     }
 
     const origin = this.stateManager.state.scenario?.fireOrigin;
     const base = origin ? [origin.lng, origin.lat] : [-118.24, 34.05];
-    const bearing = (windBearing + (resourceType === 'dozer' ? 0 : 100) + index * 20) % 360;
     return this._pointAtBearingAndDistance(base, bearing, resourceType === 'dozer' ? 2.0 : 1.2);
   }
 
@@ -687,21 +770,31 @@ class TurnSequencer {
     }
   }
 
-  _nearestFireStation(target, excludeIds = new Set()) {
+  _nearestFireStation(target, excludeIds = new Set(), resourceType = null) {
+    const stationState = this.stateManager.state.resources?.stations || {};
     const infra = this.stateManager.state.baseData?.infrastructure || {};
-    const allStations = Object.entries(infra)
-      .filter(([, value]) => value?.type === 'fire_station' && value.location)
+    const sourceEntries = Object.keys(stationState).length > 0
+      ? Object.entries(stationState)
+      : Object.entries(infra).filter(([, value]) => value?.type === 'fire_station' && value.location);
+    const availabilityKey = resourceType === 'dozer' ? 'dozers_available' : 'engines_available';
+    const allStations = sourceEntries
       .map(([id, value]) => ({
         id,
         name: value.name || id,
         lng: Number(value.location.lng),
         lat: Number(value.location.lat),
+        available: resourceType ? Number(value[availabilityKey]) : 1,
+        status: value.status,
+        operational_status: value.operational_status,
       }))
       .filter(station => Number.isFinite(station.lng) && Number.isFinite(station.lat))
       .filter(station => !this._isLocationInFire([station.lng, station.lat]));
-    const stations = allStations.filter(station => !excludeIds.has(station.id));
+    const inventoryStations = resourceType
+      ? allStations.filter(station => this._canStationDispatch(station, resourceType))
+      : allStations;
+    const stations = inventoryStations.filter(station => !excludeIds.has(station.id));
 
-    const candidates = stations.length > 0 ? stations : allStations;
+    const candidates = stations.length > 0 ? stations : inventoryStations.length > 0 ? inventoryStations : allStations;
     if (candidates.length > 0) {
       return candidates
         .map(station => {
@@ -723,6 +816,16 @@ class TurnSequencer {
       lng: target[0] - 0.035,
       lat: target[1] - 0.025,
     };
+  }
+
+  _canStationDispatch(station, resourceType) {
+    if (!station) return false;
+    const status = String(station.status || '').toLowerCase();
+    const operationalStatus = String(station.operational_status || '').toLowerCase();
+    if (['offline', 'damaged', 'burning', 'depleted'].includes(status)) return false;
+    if (['offline', 'damaged', 'burning'].includes(operationalStatus)) return false;
+    const key = resourceType === 'dozer' ? 'dozers_available' : 'engines_available';
+    return Math.max(0, Math.round(Number(station[key]) || 0)) > 0;
   }
 
   _pointAtBearingAndDistance(center, bearingDeg, distanceKm) {
@@ -794,6 +897,8 @@ class TurnSequencer {
         return event.channel ? `${event.channel} alert issued` : 'Public alert issued';
       case 'suppression_zone':
         return 'Suppression area established';
+      case 'remove_suppression_zone':
+        return 'Suppression assignment ended';
       case 'playbook_section':
         return 'Command plan updated';
       case 'tick_summary':
@@ -1038,21 +1143,31 @@ class TurnSequencer {
    * Returned as a plain-text block the agent must use when picking dispatch origins.
    */
   _buildFireStationContext(fireOrigin) {
+    const stationState = this.stateManager.state.resources?.stations || {};
     const infra = this.stateManager.state.baseData?.infrastructure || {};
-    const stations = Object.entries(infra)
-      .filter(([, v]) => v && v.type === 'fire_station' && v.location)
+    const sourceEntries = Object.keys(stationState).length > 0
+      ? Object.entries(stationState)
+      : Object.entries(infra).filter(([, v]) => v && v.type === 'fire_station' && v.location);
+    const stations = sourceEntries
       .map(([id, v]) => ({
         id,
         name: v.name || id,
         lng: v.location.lng,
         lat: v.location.lat,
+        engines: Math.max(0, Math.round(Number(v.engines_available ?? 6) || 0)),
+        dozers: Math.max(0, Math.round(Number(v.dozers_available ?? 1) || 0)),
+        engines_available: Math.max(0, Math.round(Number(v.engines_available ?? 6) || 0)),
+        dozers_available: Math.max(0, Math.round(Number(v.dozers_available ?? 1) || 0)),
+        status: v.status,
+        operational_status: v.operational_status,
         dist: Math.hypot(v.location.lng - fireOrigin.lng, v.location.lat - fireOrigin.lat),
       }))
+      .filter(st => Object.keys(stationState).length === 0 || this._canStationDispatch(st, 'engine') || this._canStationDispatch(st, 'dozer'))
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 5);
     if (stations.length === 0) return '';
     const lines = stations.map(
-      st => `- ${st.id} | ${st.name} | [${st.lng.toFixed(5)}, ${st.lat.toFixed(5)}]`,
+      st => `- ${st.id} | ${st.name} | [${st.lng.toFixed(5)}, ${st.lat.toFixed(5)}] | engines available: ${st.engines}, dozer teams available: ${st.dozers}`,
     );
     return `AVAILABLE FIRE STATIONS (pick one for each deploy_resource.from_station_id / from_location):\n${lines.join('\n')}`;
   }
@@ -1133,7 +1248,8 @@ class TurnSequencer {
   }
   resume() {
     if (this._pausedAtWallMs != null) {
-      this._cycleStartWallMs += Date.now() - this._pausedAtWallMs;
+      // Shift the sim start forward so paused time doesn't count toward elapsed hours
+      this._simStartWallMs += Date.now() - this._pausedAtWallMs;
       this._pausedAtWallMs = null;
     }
     this.paused = false;

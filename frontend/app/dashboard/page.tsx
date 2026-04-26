@@ -258,6 +258,7 @@ export default function Home() {
           case 'open_route': message = `Route ${event.route_id} reopened`; break;
           case 'traffic_jam': message = `Traffic jam on ${event.route_id}`; break;
           case 'deploy_resource': message = `${event.count} ${event.resource_type} deployed`; break;
+          case 'remove_suppression_zone': message = `Suppression assignment ended`; break;
           case 'update_shelter': message = `Shelter ${event.shelter_id} updated`; break;
           case 'infrastructure_status': message = `${event.name} marked ${event.status}`; break;
           case 'broadcast_alert': message = `${event.channel} alert issued`; break;

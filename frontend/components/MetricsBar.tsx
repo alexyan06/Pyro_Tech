@@ -150,6 +150,12 @@ export default function MetricsBar({ snapshot, simTimeString }: MetricsBarProps)
   const shelterPct = totalCapacity > 0
     ? `${Math.round((totalOccupancy / totalCapacity) * 100)}%`
     : '0%';
+  const deployedEngines = resources.summary?.engines_deployed ?? resources.engines_deployed;
+  const deployedDozers = resources.summary?.dozers_deployed ?? resources.crews_deployed;
+  const stationInventory = resources.summary?.station_inventory;
+  const resourceValue = stationInventory
+    ? `${deployedEngines}/${deployedDozers} (${stationInventory.engines_available}/${stationInventory.dozers_available})`
+    : `${deployedEngines}/${deployedDozers}`;
 
   return (
     <div style={baseStyle}>
@@ -159,6 +165,8 @@ export default function MetricsBar({ snapshot, simTimeString }: MetricsBarProps)
         <MetricItem label="Evacuees"      value={evacuation.total_evacuees.toLocaleString()}                color="var(--accent-blue)"   />
         <Divider />
         <MetricItem label="Shelter"       value={shelterPct}                                                color="var(--accent-green)"  />
+        <Divider />
+        <MetricItem label="Eng/Doz"       value={resourceValue}                                             color="var(--accent-green)"  />
         <Divider />
         <MetricItem label="Routes Closed" value={evacuation.routes_closed}                                  color="var(--accent-orange)" />
         <Divider />

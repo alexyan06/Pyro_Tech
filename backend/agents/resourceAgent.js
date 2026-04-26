@@ -23,6 +23,7 @@ GUIDELINES:
 - Add a concise ui_message (80 characters or fewer) to every map-changing event.
 - If fire is active and at least one fire station is available, emit at least one deploy_resource event every cycle.
 - MANDATORY: every deploy_resource MUST include both \`from_station_id\` and \`from_location\` chosen from the "AVAILABLE FIRE STATIONS" block in the context. Resources physically roll out from those stations toward the \`location\` where they'll stage.
+- Do not request more engines or dozer teams from a station than the AVAILABLE FIRE STATIONS block says are available.
 - Pick the station closest to the deployment \`location\` so the response feels realistic.
 - \`location\` for dozers: must be AHEAD of the fire's leading edge — outside the perimeter in the wind direction — to cut firebreaks the fire advances into. NEVER place dozers inside the fire.
 - \`location\` for engines: on the flanks (sides) of the fire, at or just outside the perimeter, for structure defense and direct attack.
