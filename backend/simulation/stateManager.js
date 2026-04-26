@@ -277,13 +277,18 @@ class StateManager {
       case 'deploy_resource':
         event.resource_type = normalizeResourceType(event.resource_type);
         event.count = Math.max(1, Number(event.count) || (event.resource_type === 'dozer' ? 2 : 8));
-        if (this._registerResourceDeployment(event)) {
-          this.state.resources.deployments.push({
-            type: event.resource_type,
-            location: event.location, // [lng, lat]
-            count: event.count,
-            resource_group_id: event.resource_group_id,
-          });
+        {
+          const group = this._registerResourceDeployment(event);
+          if (group) {
+            this.state.resources.deployments.push({
+              type: event.resource_type,
+              location: event.location, // [lng, lat]
+              count: event.count,
+              resource_group_id: event.resource_group_id,
+            });
+            const prestaged = this._prestageDozerSuppressionZone(group, event);
+            if (prestaged) derivedEvents.push(prestaged);
+          }
         }
         this._syncResourceSummary();
         break;
@@ -399,6 +404,36 @@ class StateManager {
     event.resource_group_id = group.id;
     this.state.resources.groups[group.id] = group;
     return group;
+  }
+
+  _prestageDozerSuppressionZone(group, event) {
+    if (!group || normalizeResourceType(group.type || event?.resource_type) !== 'dozer') return null;
+    if (!Array.isArray(group.destination)) return null;
+
+    const activeAt = Number.isFinite(Number(group.arrivalElapsedHours))
+      ? Number(group.arrivalElapsedHours)
+      : Number(event?.elapsed_hours) || 0;
+    const assignment = this._ensureResourceAssignment(group, activeAt);
+    if (!assignment) return null;
+    group.assignmentId = assignment.id;
+
+    const effect = assignmentToSuppressionEffect(assignment, [group], activeAt);
+    if (!effect) return null;
+
+    const zone = this._effectToSuppressionZone(effect, assignment, group, Number(event?.elapsed_hours) || activeAt);
+    if (!zone) return null;
+
+    const existingIdx = this.state.fire.suppression_effects.findIndex(existing => existing.id === zone.id);
+    if (existingIdx >= 0) {
+      this.state.fire.suppression_effects[existingIdx] = {
+        ...this.state.fire.suppression_effects[existingIdx],
+        ...zone,
+      };
+    } else {
+      this.state.fire.suppression_effects.push(zone);
+    }
+    this._syncSuppressionCompatibility();
+    return this._suppressionZoneEvent(zone, group, assignment);
   }
 
   _syncResourceSummary() {
