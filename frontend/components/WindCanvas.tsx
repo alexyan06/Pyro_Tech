@@ -26,10 +26,12 @@ export default function WindCanvas({ windU, windV, mapBearing, mapPitch }: WindC
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const currentCanvas = canvasRef.current;
+    if (!currentCanvas) return;
+    const canvas: HTMLCanvasElement = currentCanvas;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    const ctx: CanvasRenderingContext2D = context;
 
     const syncSize = () => {
       canvas.width  = canvas.offsetWidth;

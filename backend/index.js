@@ -8,6 +8,7 @@ const { TurnSequencer } = require('./orchestration/turnSequencer');
 const { initDB } = require('./db/postgres');
 const { initRedis } = require('./db/redis');
 const apiRoutes = require('./routes/api');
+const { normalizeInitialAcres } = require('./simulation/scenarioInputs');
 
 const PORT = process.env.PORT || 4000;
 
@@ -49,15 +50,16 @@ wss.on('connection', (ws) => {
         if (existing) existing.stop();
 
         const { location, bbox, timestamp, fireOrigin, metrics, initialAcres } = payload;
+        const normalizedInitialAcres = normalizeInitialAcres(initialAcres);
         const durationHours = payload.durationHours ?? 6;
         const historical_mode = payload.historical_mode === true;
         const enableTts = payload.enableTts === true;
-        console.log(`[Server] Starting simulation: "${location}" origin=(${fireOrigin.lat},${fireOrigin.lng}) duration=${durationHours}h historical=${historical_mode} tts=${enableTts}`);
+        console.log(`[Server] Starting simulation: "${location}" origin=(${fireOrigin.lat},${fireOrigin.lng}) initialAcres=${normalizedInitialAcres} duration=${durationHours}h historical=${historical_mode} tts=${enableTts}`);
         const sequencer = new TurnSequencer(sendToClient);
         activeSimulations.set(ws, sequencer);
 
         try {
-          await sequencer.runSimulation({ location, bbox, timestamp, fireOrigin, metrics, initialAcres, durationHours }, ws, { historical_mode, enableTts });
+          await sequencer.runSimulation({ location, bbox, timestamp, fireOrigin, metrics, initialAcres: normalizedInitialAcres, durationHours }, ws, { historical_mode, enableTts });
         } catch (err) {
           console.error('[Server] Simulation error:', err);
           sendToClient(ws, { type: 'error', payload: { message: err.message } });

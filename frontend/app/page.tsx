@@ -70,6 +70,12 @@ function bearingToCardinal(deg: number): string {
   return dirs[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
 }
 
+function clampNumber(value: string, min: number, max: number, fallback: number): number {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
 export default function SetupPage() {
   const router = useRouter();
   const { setPhase } = useLoading();
@@ -124,6 +130,7 @@ export default function SetupPage() {
       const _rad = (Number.isFinite(windFromDeg) ? windFromDeg : 45) * Math.PI / 180;
       const windU = parseFloat((-_speedMs * Math.sin(_rad)).toFixed(4));
       const windV = parseFloat((-_speedMs * Math.cos(_rad)).toFixed(4));
+      const initialAcres = clampNumber(form.acres, 0, 10000, 10);
       const res = await fetch(`${API_BASE}/api/setup-scenario`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,7 +139,7 @@ export default function SetupPage() {
           datetime: form.datetime,
           fireLat: parseFloat(form.lat) || null,
           fireLng: parseFloat(form.lng) || null,
-          initialAcres: parseFloat(form.acres) || 10,
+          initialAcres,
           windU,
           windV,
           durationHours: parseFloat(form.durationHours) || 6,

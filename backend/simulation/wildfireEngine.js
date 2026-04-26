@@ -141,7 +141,7 @@ class WildfireEngine {
       previousSectorPoints[i] = previousPoint;
       // Cap growth delta to the natural formula increment so suppression-pulled sectors
       // don't see a large catch-up jump that overwhelms engine direct attack.
-      const prevRawDistanceKm = this._lastRawDistancesKm?.[i] ?? rawDistanceKm;
+      const prevRawDistanceKm = this._lastRawDistancesKm?.[i] ?? previousDistanceKm;
       const formulaIncrement = Math.max(0, rawDistanceKm - prevRawDistanceKm);
       const growthDeltaKm = Math.min(Math.max(0, rawDistanceKm - previousDistanceKm), formulaIncrement);
       nextRawDistances[i] = rawDistanceKm;

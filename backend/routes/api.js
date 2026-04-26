@@ -9,6 +9,7 @@ const { fetchAllForBbox } = require('../data/overpassFetcher');
 const { setScenarioState, getScenarioState } = require('../data/scenarioState');
 const { fetchPopulationForBbox } = require('../data/populationFetcher');
 const { synthesizeEvacuationZones } = require('../data/zoneSynthesizer');
+const { normalizeInitialAcres } = require('../simulation/scenarioInputs');
 
 // Rate limiter for scenario setup (expensive external calls)
 const setupLimiter = rateLimit({
@@ -170,6 +171,8 @@ router.get('/scenario', (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/setup-scenario', setupLimiter, async (req, res) => {
   const { city, datetime, fireLat, fireLng, initialAcres, durationHours, windU, windV } = req.body ?? {};
+  const parsedDurationHours = Number(durationHours);
+  const normalizedInitialAcres = normalizeInitialAcres(initialAcres);
   const parsedWindU = Number(windU);
   const parsedWindV = Number(windV);
 
@@ -266,8 +269,8 @@ router.post('/setup-scenario', setupLimiter, async (req, res) => {
       datetime: datetime || new Date().toISOString(),
       fireLat: fireLat ?? centerLat,
       fireLng: fireLng ?? centerLng,
-      initialAcres: initialAcres ?? 10,
-      durationHours: Number.isFinite(durationHours) ? Math.min(12, Math.max(1, durationHours)) : 6,
+      initialAcres: normalizedInitialAcres,
+      durationHours: Number.isFinite(parsedDurationHours) ? Math.min(12, Math.max(1, parsedDurationHours)) : 6,
       metrics: {
         // Default: 35 mph from NE (45° FROM) as U/V components (m/s)
         windU: Number.isFinite(parsedWindU) ? parsedWindU : parseFloat((-35 * 0.44704 * Math.sin(Math.PI / 4)).toFixed(4)),
@@ -288,7 +291,7 @@ router.post('/setup-scenario', setupLimiter, async (req, res) => {
 
     const scenarioText =
       `Simulate a wildfire that starts ${fireOriginLabel} in ${place.display_name}. ` +
-      `The fire begins on ${datetime ?? 'now'} with an initial size of ${initialAcres ?? 10} acres. ` +
+      `The fire begins on ${datetime ?? 'now'} with an initial size of ${normalizedInitialAcres} acres. ` +
       `Use the fetched infrastructure data (hospitals, fire stations, power substations, routes, evacuation zones, and shelters) ` +
       `to coordinate emergency response.`;
 

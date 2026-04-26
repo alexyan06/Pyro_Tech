@@ -67,6 +67,12 @@ async function fetchGeoJSON(filename: string, bust?: string): Promise<GeoJSONCol
 
 const EMPTY_GEOJSON: GeoJSONCollection = { type: 'FeatureCollection', features: [] };
 
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
 function SimControl({ label, onClick, danger, purple }: { label: string; onClick: () => void; danger?: boolean; purple?: boolean }) {
   const color = danger ? 'var(--accent-red)' : purple ? 'var(--accent-purple)' : 'var(--text-secondary)';
   return (
@@ -327,7 +333,6 @@ export default function Home() {
     resume,
     stop,
     isPaused,
-    requestPlaybook,
     startBranch,
     clearBranch,
     sendAudioDone,
@@ -470,6 +475,9 @@ export default function Home() {
 
     // bbox from API is [south, west, north, east]
     // ScenarioInput expects [west, south, east, north]
+    const initialAcres = clampNumber(storedScenario.initialAcres, 0, 10000, 10);
+    const durationHours = clampNumber(storedScenario.durationHours, 1, 12, 6);
+
     const payload: ScenarioInput = {
       location: storedScenario.displayName || storedScenario.city,
       bbox: [
@@ -481,9 +489,9 @@ export default function Home() {
       timestamp: storedScenario.datetime + (storedScenario.datetime.endsWith('Z') ? '' : ':00Z'),
       fireOrigin: { lat: storedScenario.fireLat, lng: storedScenario.fireLng },
       metrics: storedScenario.metrics ?? { windU: -11.066, windV: -11.066, temp: 85, humidity: 15 },
-      initialAcres: storedScenario.initialAcres ?? 10,
+      initialAcres,
       historical_mode: storedScenario.historical_mode ?? false,
-      durationHours: storedScenario.durationHours ?? 6,
+      durationHours,
       enableTts: storedScenario.enableTts ?? false,
     };
 

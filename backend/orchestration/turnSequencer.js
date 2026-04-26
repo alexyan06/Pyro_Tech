@@ -12,6 +12,7 @@ const { CongestionAgent } = require('../agents/congestionAgent');
 const { StateManager } = require('../simulation/stateManager');
 const { WildfireEngine } = require('../simulation/wildfireEngine');
 const { fetchWeather } = require('../simulation/weatherFetcher');
+const { normalizeInitialAcres } = require('../simulation/scenarioInputs');
 const { detectConflicts } = require('./conflictDetector');
 const { generatePlaybook, generateExecutiveSummary } = require('../playbook/generator');
 
@@ -95,8 +96,10 @@ class TurnSequencer {
     const historicalMode = opts.historical_mode === true;
     const historicalPerimeters = historicalMode ? this._loadHistoricalPerimeters() : null;
     const durationHours = normalizeDurationHours(scenarioInput.durationHours);
+    const initialAcres = normalizeInitialAcres(scenarioInput.initialAcres);
     const totalCycles = Math.ceil(durationHours * 60 / LOGICAL_MINUTES_PER_CYCLE);
     scenarioInput.durationHours = durationHours;
+    scenarioInput.initialAcres = initialAcres;
     this.ttsMode = opts.enableTts === true;
     this._audioWaiters = new Map();
     this.stateManager.reset();
@@ -173,7 +176,7 @@ class TurnSequencer {
         humidity: weather.humidity,
         temperature: weather.temperature,
         pm25: weather.pm25,
-        initialAcres: scenarioInput.initialAcres,
+        initialAcres,
       },
     );
 

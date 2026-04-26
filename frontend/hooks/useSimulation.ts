@@ -35,6 +35,12 @@ function formatSimDate(simDate: Date): string {
   return `${hh}:${mm}:${ss} ${MONTHS[simDate.getUTCMonth()]} ${simDate.getUTCDate()}, ${simDate.getUTCFullYear()}`;
 }
 
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
 // ScenarioInput is imported from @/lib/types — no local options interface needed.
 
 export function useSimulation(options: UseSimulationOptions = {}) {
@@ -272,6 +278,9 @@ export function useSimulation(options: UseSimulationOptions = {}) {
 
   const startSimulation = useCallback(
     (input: ScenarioInput) => {
+      const initialAcres = clampNumber(input.initialAcres, 0, 10000, 10);
+      const durationHours = clampNumber(input.durationHours, 1, 12, 6);
+
       setAgentMessages(new Map());
       setTimeline([]);
       setCurrentAgent(null);
@@ -293,9 +302,9 @@ export function useSimulation(options: UseSimulationOptions = {}) {
           timestamp: input.timestamp,
           fireOrigin: input.fireOrigin,
           metrics: input.metrics,
-          initialAcres: input.initialAcres ?? 10,
+          initialAcres,
           historical_mode: input.historical_mode ?? false,
-          durationHours: input.durationHours ?? 6,
+          durationHours,
           enableTts:     input.enableTts ?? false,
         },
       });

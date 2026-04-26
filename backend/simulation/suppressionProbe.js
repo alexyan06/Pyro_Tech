@@ -93,6 +93,15 @@ function runPerimeter(suppressionEffects) {
   };
 }
 
+function firstPerimeterAcres(initialAcres) {
+  const engine = new WildfireEngine(origin, windBearing, 40, {
+    humidity: 20,
+    temperature: 85,
+    initialAcres,
+  });
+  return engine.generatePerimeter(0.01).features[0].properties.acres;
+}
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -102,6 +111,10 @@ const engine = makeEngineEffect(1.5);
 const none = runPerimeter([]);
 const dozerOnly = runPerimeter([dozer]);
 const engineOnly = runPerimeter([engine]);
+const initial10 = firstPerimeterAcres(10);
+const initial50 = firstPerimeterAcres(50);
+const initial200 = firstPerimeterAcres(200);
+const initial500 = firstPerimeterAcres(500);
 
 assert(dozer.bearing_deg === windBearing, 'Dozer effect bearing must use wind bearing');
 assert(dozer.visual_geojson.properties.orientation_deg === 135, 'Dozer line must be perpendicular to wind');
@@ -111,10 +124,19 @@ assert(dozerOnly.dozerHits > 0, 'Dozer line should block at least one sector cro
 assert(dozerOnly.headKm < none.headKm, 'Dozer line should reduce head-fire growth');
 assert(engineOnly.engineHits > 0, 'Engine zone should suppress at least one sector');
 assert(engineOnly.acres < none.acres, 'Engine zone should reduce burned acres');
+assert(initial10 < initial50 && initial50 < initial200 && initial200 < initial500, 'Initial acres should control the first fire perimeter size');
+assert(initial50 >= 30 && initial50 <= 80, '50 initial acres should produce a first perimeter near 50 acres');
+assert(initial200 >= 140 && initial200 <= 260, '200 initial acres should produce a first perimeter near 200 acres');
 
 console.log(JSON.stringify({
   dozerLineBearing: dozer.bearing_deg,
   dozerLineOrientation: dozer.visual_geojson.properties.orientation_deg,
+  initialAcresProbe: {
+    10: initial10,
+    50: initial50,
+    200: initial200,
+    500: initial500,
+  },
   none,
   dozer: dozerOnly,
   engine: engineOnly,
