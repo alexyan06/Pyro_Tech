@@ -15,10 +15,12 @@ const AGENT_VOICES = {
  * Returns a Buffer of MP3 audio, or null if synthesis fails / key not set.
  */
 function stripMetadata(text) {
-  // Remove ```json ... ``` code fences (map event payloads the AI embeds after its prose).
+  // Remove closed code fences, then strip any unclosed fence (truncated agent output)
+  // that runs to the end of the string.
   return text
     .replace(/```json[\s\S]*?```/g, '')
     .replace(/```[\s\S]*?```/g, '')
+    .replace(/```[\s\S]*/g, '')
     .trim();
 }
 
@@ -29,8 +31,11 @@ async function synthesize(agentName, text) {
   }
 
   const voiceId = AGENT_VOICES[agentName] || AGENT_VOICES.synthesis;
-
+  console.log("text")
+  console.log(text)
   const prose = stripMetadata(text);
+  console.log("prose")
+  console.log(prose)
   if (!prose) return null;
 
   // Trim to avoid excessive synthesis costs (max 500 chars)
