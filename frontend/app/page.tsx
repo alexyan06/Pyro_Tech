@@ -62,6 +62,7 @@ interface FormState {
   windSpeed: string;
   windDirection: string;
   durationHours: string;
+  enableTts: boolean;
 }
 
 function bearingToCardinal(deg: number): string {
@@ -81,6 +82,7 @@ export default function SetupPage() {
     windSpeed: '35',
     windDirection: '45',
     durationHours: '6',
+    enableTts: false,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +92,7 @@ export default function SetupPage() {
     const p = PRESETS.find((x) => x.label === label);
     if (!p) return;
     setPreset(label);
-    setForm({
+    setForm(f => ({
       city: p.city,
       datetime: p.datetime,
       lat: p.lat,
@@ -99,7 +101,8 @@ export default function SetupPage() {
       windSpeed: p.windSpeed,
       windDirection: p.windDirection,
       durationHours: p.durationHours,
-    });
+      enableTts: f.enableTts,
+    }));
   }
 
   function update(key: keyof FormState, value: string) {
@@ -142,7 +145,7 @@ export default function SetupPage() {
         .then(r => r.ok ? r.json() : null)
         .catch(() => null);
 
-      sessionStorage.setItem('pyrotech_scenario', JSON.stringify(data));
+      sessionStorage.setItem('pyrotech_scenario', JSON.stringify({ ...data, enableTts: form.enableTts }));
       setPhase('connecting');
       router.push('/dashboard');
     } catch (err: unknown) {
@@ -369,6 +372,20 @@ export default function SetupPage() {
                 <span className="sp-hint">~30 seconds of real time per simulated hour</span>
               </div>
 
+              <div className="sp-field">
+                <label className="sp-tts-row" htmlFor="enableTts">
+                  <input
+                    id="enableTts"
+                    type="checkbox"
+                    className="sp-tts-check"
+                    checked={form.enableTts}
+                    onChange={(e) => setForm(f => ({ ...f, enableTts: e.target.checked }))}
+                  />
+                  <span className="sp-fl" style={{ margin: 0 }}>Sequential agent voice transmission</span>
+                </label>
+                <span className="sp-hint">Each agent waits for the previous radio call to finish. Muting is allowed but does not skip the queue.</span>
+              </div>
+
               {error && (
                 <div className="sp-error" role="alert">
                   <span className="sp-error-mark" aria-hidden="true">!</span>
@@ -584,6 +601,8 @@ export default function SetupPage() {
         }
         .sp-sublabel { font-size: 0.66rem; letter-spacing: 0.06em; color: var(--text-secondary); }
         .sp-hint { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+        .sp-tts-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .sp-tts-check { width: 14px; height: 14px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
 
         .sp-input {
           background: var(--background);

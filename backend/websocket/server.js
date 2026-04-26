@@ -123,6 +123,13 @@ function validateScenarioPayload(payload) {
     errors.push('durationHours must be a number between 1 and 12');
   }
 
+  if (
+    payload.enableTts !== undefined &&
+    typeof payload.enableTts !== 'boolean'
+  ) {
+    errors.push('enableTts must be a boolean');
+  }
+
   return { valid: errors.length === 0, errors };
 }
 

@@ -20,7 +20,7 @@ export interface BranchAgentMessage {
 
 interface UseSimulationOptions {
   onMapEvent?: (event: MapEventData, agent?: AgentName, uiMessage?: string) => void;
-  onAgentAudio?: (agent: AgentName, audioBase64: string) => void;
+  onAgentAudio?: (agent: AgentName, audioBase64: string, tick: number) => void;
   onStateSnapshot?: (snap: StateSnapshot) => void;
   onSimulationReady?: () => void;
   onParticleUpdate?: (particles: [number, number][], trips?: TripWaypoint[]) => void;
@@ -208,8 +208,8 @@ export function useSimulation(options: UseSimulationOptions = {}) {
           break;
 
         case 'agent_audio': {
-          const { agent, audio_base64 } = msg.payload as { agent: AgentName; audio_base64: string };
-          onAgentAudioRef.current?.(agent, audio_base64);
+          const { agent, audio_base64, tick } = msg.payload as { agent: AgentName; audio_base64: string; tick: number };
+          onAgentAudioRef.current?.(agent, audio_base64, tick);
           break;
         }
 
@@ -301,6 +301,7 @@ export function useSimulation(options: UseSimulationOptions = {}) {
           initialAcres:  input.initialAcres ?? 10,
           historical_mode: input.historical_mode ?? false,
           durationHours: input.durationHours ?? 6,
+          enableTts:     input.enableTts ?? false,
         },
       });
       setIsRunning(true);
@@ -335,6 +336,21 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     branchBufferRef.current = new Map();
   }, []);
 
+  const sendAudioDone = useCallback((agent: AgentName, tick: number) => {
+    send({ type: 'audio_done', payload: { agent, tick } });
+  }, [send]);
+
+  // Stop simulation and close WS when the dashboard unmounts (navigation away, browser back).
+  useEffect(() => {
+    return () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'control', payload: { action: 'stop' } }));
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, []);
+
   return {
     isConnected, isRunning,
     agentMessages, timeline, currentAgent, currentText,
@@ -345,5 +361,6 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     connect, disconnect, startSimulation,
     pause, resume, stop, isPaused, requestPlaybook,
     startBranch, clearBranch,
+    sendAudioDone,
   };
 }

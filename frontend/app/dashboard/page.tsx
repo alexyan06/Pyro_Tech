@@ -36,6 +36,7 @@ interface StoredScenario {
   bbox: number[];
   metrics?: { windU: number; windV: number; temp: number; humidity: number };
   historical_mode?: boolean;
+  enableTts?: boolean;
 }
 
 const WS_BASE = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:4000';
@@ -98,8 +99,8 @@ export default function Home() {
   const router = useRouter();
   const { mapState, dispatch, reset } = useMapState();
   const [showPlaybook, setShowPlaybook] = useState(false);
-  const { enqueue: enqueueAudio, isMuted, toggleMute } = useAgentAudio();
   const [storedScenario, setStoredScenario] = useState<StoredScenario | null>(null);
+  const ttsMode = storedScenario?.enableTts ?? false;
   const [notifications, setNotifications] = useState<MapNotification[]>([]);
   const [mapWidth, setMapWidth] = useState(60);
   const { setPhase } = useLoading();
@@ -125,9 +126,12 @@ export default function Home() {
     }, 4000);
   }, []);
 
-  const handleAudio = useCallback((agent: AgentName, audioBase64: string) => {
-    enqueueAudio(agent, audioBase64);
-  }, [enqueueAudio]);
+  // Use a ref so handleAudio can be defined before useAgentAudio without a circular dep.
+  const enqueueAudioRef = useRef<((agent: AgentName, audioBase64: string, tick: number) => void) | null>(null);
+
+  const handleAudio = useCallback((agent: AgentName, audioBase64: string, tick: number) => {
+    enqueueAudioRef.current?.(agent, audioBase64, tick);
+  }, []);
 
   // Seed GeoJSON base data from the backend (serves OSM scenario data when available)
   const seedBaseData = useCallback(async (bust?: string) => {
@@ -325,7 +329,15 @@ export default function Home() {
     requestPlaybook,
     startBranch,
     clearBranch,
+    sendAudioDone,
   } = useSimulation({ onMapEvent: handleMapEvent, onAgentAudio: handleAudio, onSimulationReady: handleSimulationReady, onParticleUpdate: handleParticleUpdate });
+
+  const { enqueue: enqueueAudio, isMuted, toggleMute, stopAll: stopAudio } = useAgentAudio({
+    ttsMode,
+    onPlaybackEnd: sendAudioDone,
+  });
+  // Sync ref so handleAudio (defined above useSimulation) can reach enqueueAudio.
+  useEffect(() => { enqueueAudioRef.current = enqueueAudio; }, [enqueueAudio]);
 
   const { isReplaying, replayTick, replaySnapshot, setReplayTick, exitReplay, minTick, maxTick } =
     useReplay(snapshots);
@@ -471,6 +483,7 @@ export default function Home() {
       initialAcres: storedScenario.initialAcres ?? 10,
       historical_mode: storedScenario.historical_mode ?? false,
       durationHours: storedScenario.durationHours ?? 6,
+      enableTts: storedScenario.enableTts ?? false,
     };
 
     reset();
@@ -549,26 +562,30 @@ export default function Home() {
         )}
 
         <div className="flex items-center" style={{ gap: '10px' }}>
-          <button
-            onClick={toggleMute}
-            title={isMuted ? 'Unmute agent voices' : 'Mute agent voices'}
-            style={{
-              fontFamily: 'var(--font-condensed)',
-              fontSize: '0.65rem',
-              fontWeight: 600,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              border: '1px solid var(--border)',
-              borderRadius: '2px',
-              padding: '3px 8px',
-              background: 'transparent',
-              color: isMuted ? 'var(--accent-red)' : 'var(--accent-green)',
-              cursor: 'pointer',
-            }}
-          >
-            {isMuted ? 'Audio Off' : 'Audio On'}
-          </button>
-          <div style={{ width: '1px', height: '14px', background: 'var(--border)' }} />
+          {ttsMode && (
+            <>
+              <button
+                onClick={toggleMute}
+                title={isMuted ? 'Unmute agent voices' : 'Mute agent voices'}
+                style={{
+                  fontFamily: 'var(--font-condensed)',
+                  fontSize: '0.65rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  border: '1px solid var(--border)',
+                  borderRadius: '2px',
+                  padding: '3px 8px',
+                  background: 'transparent',
+                  color: isMuted ? 'var(--accent-red)' : 'var(--accent-green)',
+                  cursor: 'pointer',
+                }}
+              >
+                {isMuted ? 'Audio Off' : 'Audio On'}
+              </button>
+              <div style={{ width: '1px', height: '14px', background: 'var(--border)' }} />
+            </>
+          )}
           <span
             style={{
               width: '7px',
@@ -698,7 +715,7 @@ export default function Home() {
         {isRunning ? (
           <>
             <SimControl label={isPaused ? 'Resume' : 'Pause'} onClick={() => { if (isPaused) { resume(); } else { pause(); } }} />
-            <SimControl label="Stop" danger onClick={stop} />
+            <SimControl label="Stop" danger onClick={() => { stop(); stopAudio(); }} />
           </>
         ) : (
           <>
