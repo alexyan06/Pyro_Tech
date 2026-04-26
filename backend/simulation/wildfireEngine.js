@@ -9,7 +9,7 @@ const turf = require('@turf/turf');
 class WildfireEngine {
   /**
    * @param {[number, number]} ignitionPoint  [lng, lat]
-   * @param {number} windBearing              degrees (0=N, 90=E)
+   * @param {number} windBearing              TO bearing degrees (0=N, 90=E) — direction fire spreads toward
    * @param {number} windSpeed                mph
    * @param {object} [weatherExtras]          Optional real-weather fields
    * @param {number} [weatherExtras.humidity]     % (0-100), default 30
@@ -192,6 +192,12 @@ class WildfireEngine {
     let acresBurned  = Math.round(Math.PI * headFire * flankFire * 247.105);
     const spreadRateAc = Math.round(spreadGrowthKm * 247.105);
 
+    // Derive U/V (m/s) from internal TO-bearing + speed for unambiguous output.
+    const _speedMs = this.windSpeed * 0.44704;
+    const _bearingRad = this.windBearing * Math.PI / 180;
+    const _windU = parseFloat((_speedMs * Math.sin(_bearingRad)).toFixed(4));
+    const _windV = parseFloat((_speedMs * Math.cos(_bearingRad)).toFixed(4));
+
     let perimFeature = {
       type: 'Feature',
       properties: {
@@ -199,7 +205,8 @@ class WildfireEngine {
         tick,
         spread_rate:       spreadRateAc,
         wind_bearing:      this.windBearing,
-        wind_speed:        this.windSpeed,
+        wind_u:            _windU,
+        wind_v:            _windV,
         humidity:          this.humidity,
         temperature:       this.temperature,
         pm25:              this.pm25,
@@ -416,7 +423,7 @@ class WildfireEngine {
         ? Math.max(0.05, Math.min(0.4, Number(zone.cut_depth_km) || 0.25))
         : Math.max(0.03, 0.12 * (1 - holdingPower));
       const candidate = projectedLineDistanceKm - bufferBehindLine;
-      
+
       if (zone.type === 'dozer') {
         // Enforce hard cap for dozers, pulling it back if smoothing pushed it forward.
         limit = Math.min(limit, candidate);
@@ -698,6 +705,49 @@ class WildfireEngine {
   }
 
   _generateSpotFires(tick, growthRate, suppressionZones, mainPerimeter) {
+    if (this.windSpeed < 18 || tick < 0.35) return [];
+    const count = Math.min(3, 1 + Math.floor(this.windSpeed / 35));
+    const spots = [];
+
+    for (let i = 0; i < count; i++) {
+      const phase = this._noise(i * 9.17 + Math.floor(tick * 2));
+      if (phase < 0.34 && i > 0) continue;
+
+      const offset = (i - (count - 1) / 2) * (12 + this.windSpeed * 0.12);
+      const bearing = (this.windBearing + offset + (phase - 0.5) * 10 + 360) % 360;
+      const distance = growthRate * (1.55 + i * 0.22 + phase * 0.35);
+      const radius = Math.max(0.045, growthRate * (0.08 + phase * 0.04));
+      const center = this._pointAtBearingAndDistance(this.ignition, bearing, distance);
+      const ring = [];
+      for (let p = 0; p < 18; p++) {
+        const a = (p / 18) * 360;
+        const wobble = 0.82 + this._noise(i * 31 + p * 0.7 + Math.floor(tick * 4)) * 0.35;
+        ring.push(this._pointAtBearingAndDistance(center, a, radius * wobble));
+      }
+      ring.push(ring[0]);
+
+      const spotSpeedMs = this.windSpeed * 0.44704;
+      const spotBearingRad = this.windBearing * Math.PI / 180;
+      const feature = {
+        type: 'Feature',
+        properties: {
+          spot_fire: true,
+          source: 'ember_cast',
+          wind_bearing: this.windBearing,
+          wind_u: parseFloat((spotSpeedMs * Math.sin(spotBearingRad)).toFixed(4)),
+          wind_v: parseFloat((spotSpeedMs * Math.cos(spotBearingRad)).toFixed(4)),
+        },
+        geometry: { type: 'Polygon', coordinates: [ring] },
+      };
+
+      try {
+        if (mainPerimeter && turf.booleanPointInPolygon(turf.point(center), mainPerimeter)) continue;
+      } catch (_) {}
+
+      const suppressed = this._suppressionDamping(center, bearing, tick, suppressionZones) > 0.18;
+      if (!suppressed) spots.push(feature);
+    }
+    return spots;
     return [];
   }
 
@@ -727,5 +777,31 @@ class WildfireEngine {
     ];
   }
 }
+
+/**
+ * Convert U/V wind components (m/s) to the TO-bearing (degrees) and speed (mph)
+ * expected by WildfireEngine's constructor.
+ * @param {number} windU  Eastward component m/s
+ * @param {number} windV  Northward component m/s
+ * @returns {{ windBearing: number, windSpeed: number }}
+ */
+WildfireEngine.uvToEngine = function uvToEngine(windU, windV) {
+  const speedMs = Math.sqrt(windU * windU + windV * windV);
+  const speedMph = speedMs / 0.44704;
+  const bearingDeg = ((Math.atan2(windU, windV) * 180 / Math.PI) + 360) % 360;
+  return { windBearing: bearingDeg, windSpeed: speedMph };
+};
+
+/**
+ * Factory that accepts U/V wind components instead of bearing + speed.
+ * @param {[number, number]} ignition  [lng, lat]
+ * @param {number} windU               Eastward component m/s
+ * @param {number} windV               Northward component m/s
+ * @param {object} [extras]            Passed to WildfireEngine constructor extras
+ */
+WildfireEngine.fromUV = function fromUV(ignition, windU, windV, extras = {}) {
+  const { windBearing, windSpeed } = WildfireEngine.uvToEngine(windU, windV);
+  return new WildfireEngine(ignition, windBearing, windSpeed, extras);
+};
 
 module.exports = { WildfireEngine };

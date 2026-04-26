@@ -8,7 +8,7 @@ product
 
 Two overlapping audiences:
 
-**Primary — Emergency management professionals.** Incident commanders, EOC staff, fire agency planners using Ember in a prevention and preparedness context. They think in ICS structure, read maps instinctively, and trust data-dense interfaces. They need the tool to feel operationally credible — not like a toy or a slideshow.
+**Primary — Emergency management professionals.** Incident commanders, EOC staff, fire agency planners using PyroTech in a prevention and preparedness context. They think in ICS structure, read maps instinctively, and trust data-dense interfaces. They need the tool to feel operationally credible — not like a toy or a slideshow.
 
 **Secondary — Informed general public.** People with personal stakes in wildfire risk: residents, journalists, researchers, students. They can follow a simulation if the UI gives them legible entry points, but they'll disengage if the interface is opaque or feels like it's for specialists only.
 
@@ -16,7 +16,7 @@ The tension to resolve: expert density without gatekeeping. The map and agent fe
 
 ## Product Purpose
 
-Ember simulates real-time wildfire incident command using a multi-agent AI orchestration layer. Seven specialized LLM agents coordinate a disaster response — modeling fire spread, evacuation flows, resource deployment, infrastructure damage, and public communications — over a physics-informed geospatial map.
+PyroTech simulates real-time wildfire incident command using a multi-agent AI orchestration layer. Seven specialized LLM agents coordinate a disaster response — modeling fire spread, evacuation flows, resource deployment, infrastructure damage, and public communications — over a physics-informed geospatial map.
 
 Success looks like: a user can configure a real-world scenario, watch the simulation unfold, understand why each decision was made, and walk away with a credible mental model of how wildfire response actually works.
 
@@ -28,7 +28,7 @@ The interface should feel like it belongs in a real Emergency Operations Center 
 
 ## Anti-references
 
-- **Games**: Ember must not look like a strategy game or a disaster sim game. No health bars, no score counters, no game-UI chrome.
+- **Games**: PyroTech must not look like a strategy game or a disaster sim game. No health bars, no score counters, no game-UI chrome.
 - **Generic dashboards**: Not Grafana, not Tableau, not any BI tool that could be repurposed for anything. Every element should feel specific to wildfire incident command.
 - **Conversational AI interfaces**: Not Claude, not ChatGPT. The agent feed is a radio net, not a chat window.
 - **Consumer news/weather apps**: No panic aesthetics, no over-saturated breaking-news red banners, no Weather.com color gradients.

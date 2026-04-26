@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MapView from '@/components/MapView';
@@ -10,8 +10,9 @@ import PlaybookViewer from '@/components/PlaybookViewer';
 import ReplayScrubber from '@/components/ReplayScrubber';
 import BranchPanel from '@/components/BranchPanel';
 import { MapNotifications, type MapNotification } from '@/components/MapNotifications';
+import { useLoading } from '@/lib/loadingState';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useMapState } from '@/hooks/useMapState';
+import { useMapState, type SuppressionZone } from '@/hooks/useMapState';
 import { useAgentAudio } from '@/hooks/useAgentAudio';
 import { useReplay } from '@/hooks/useReplay';
 import { dispatchMapEvent } from '@/lib/mapEvents';
@@ -33,8 +34,9 @@ interface StoredScenario {
   durationHours?: number;
   datetime: string;
   bbox: number[];
-  metrics?: { wind: number; windDirection?: number; temp: number; humidity: number };
+  metrics?: { windU: number; windV: number; temp: number; humidity: number };
   historical_mode?: boolean;
+  enableTts?: boolean;
 }
 
 const WS_BASE = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:4000';
@@ -97,9 +99,14 @@ export default function Home() {
   const router = useRouter();
   const { mapState, dispatch, reset } = useMapState();
   const [showPlaybook, setShowPlaybook] = useState(false);
-  const { enqueue: enqueueAudio, isMuted, toggleMute } = useAgentAudio();
   const [storedScenario, setStoredScenario] = useState<StoredScenario | null>(null);
+  const ttsMode = storedScenario?.enableTts ?? false;
   const [notifications, setNotifications] = useState<MapNotification[]>([]);
+  const [mapWidth, setMapWidth] = useState(60);
+  const { setPhase } = useLoading();
+  const hasMarkedReady = useRef(false);
+  const isDraggingRef = useRef(false);
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   const recentNotificationsRef = useRef<Map<string, number>>(new Map());
 
@@ -119,9 +126,12 @@ export default function Home() {
     }, 4000);
   }, []);
 
-  const handleAudio = useCallback((agent: AgentName, audioBase64: string) => {
-    enqueueAudio(agent, audioBase64);
-  }, [enqueueAudio]);
+  // Use a ref so handleAudio can be defined before useAgentAudio without a circular dep.
+  const enqueueAudioRef = useRef<((agent: AgentName, audioBase64: string, tick: number) => void) | null>(null);
+
+  const handleAudio = useCallback((agent: AgentName, audioBase64: string, tick: number) => {
+    enqueueAudioRef.current?.(agent, audioBase64, tick);
+  }, []);
 
   // Seed GeoJSON base data from the backend (serves OSM scenario data when available)
   const seedBaseData = useCallback(async (bust?: string) => {
@@ -134,7 +144,7 @@ export default function Home() {
       let zonesGeo: GeoJSONCollection = EMPTY_GEOJSON;
 
       // 1. Try to load from pre-fetched promise in window
-      const bundlePromise = (window as unknown as Record<string, Promise<unknown>>).__EMBER_GEOJSON_PROMISE__;
+      const bundlePromise = (window as unknown as Record<string, Promise<unknown>>).__PYROTECH_GEOJSON_PROMISE__;
       if (bundlePromise) {
         try {
           const bundle = await bundlePromise as Record<string, unknown>;
@@ -145,15 +155,15 @@ export default function Home() {
             popGeo = (bundle.population_tracts as GeoJSONCollection | undefined) ?? EMPTY_GEOJSON;
             routesGeo = (bundle.evacuation_routes as GeoJSONCollection | undefined) ?? EMPTY_GEOJSON;
             zonesGeo = (bundle.evacuation_zones as GeoJSONCollection | undefined) ?? EMPTY_GEOJSON;
-            console.log('[Ember] Using pre-fetched GeoJSON bundle from window promise');
+            console.log('[PyroTech] Using pre-fetched GeoJSON bundle from window promise');
           }
         } catch { /* fallback to fetch */ }
-        delete (window as unknown as Record<string, unknown>).__EMBER_GEOJSON_PROMISE__;
+        delete (window as unknown as Record<string, unknown>).__PYROTECH_GEOJSON_PROMISE__;
       }
 
       // 2. Fallback to individual fetches if bundle was missing or failed
       if (sheltersGeo.features.length === 0) {
-        console.log('[Ember] Fetching GeoJSON layers individually...');
+        console.log('[PyroTech] Fetching GeoJSON layers individually...');
         [sheltersGeo, hospitalsGeo, stationsGeo, popGeo, routesGeo, zonesGeo] =
           await Promise.all([
             fetchGeoJSON('shelters.geojson',           bust).catch(() => EMPTY_GEOJSON),
@@ -233,7 +243,7 @@ export default function Home() {
         zones,
       });
     } catch (err) {
-      console.warn('[Ember] Could not seed base data:', err);
+      console.warn('[PyroTech] Could not seed base data:', err);
     }
   }, [dispatch]);
 
@@ -279,11 +289,13 @@ export default function Home() {
     [dispatch, addNotification],
   );
 
-  const handleStateSnapshot = useCallback(
+  const handleSimulationReady = useCallback(
     () => {
-      // Trip waypoints are driven by particle_update (every 2s), not state_snapshot.
+      if (hasMarkedReady.current) return;
+      hasMarkedReady.current = true;
+      setPhase('done');
     },
-    [],
+    [setPhase],
   );
 
   const handleParticleUpdate = useCallback(
@@ -318,10 +330,67 @@ export default function Home() {
     requestPlaybook,
     startBranch,
     clearBranch,
-  } = useSimulation({ onMapEvent: handleMapEvent, onAgentAudio: handleAudio, onStateSnapshot: handleStateSnapshot, onParticleUpdate: handleParticleUpdate });
+    sendAudioDone,
+  } = useSimulation({ onMapEvent: handleMapEvent, onAgentAudio: handleAudio, onSimulationReady: handleSimulationReady, onParticleUpdate: handleParticleUpdate });
+
+  const { enqueue: enqueueAudio, isMuted, toggleMute, stopAll: stopAudio } = useAgentAudio({
+    ttsMode,
+    onPlaybackEnd: sendAudioDone,
+  });
+  // Sync ref so handleAudio (defined above useSimulation) can reach enqueueAudio.
+  useEffect(() => { enqueueAudioRef.current = enqueueAudio; }, [enqueueAudio]);
 
   const { isReplaying, replayTick, replaySnapshot, setReplayTick, exitReplay, minTick, maxTick } =
     useReplay(snapshots);
+
+  // When replaying, overlay snapshot data onto live mapState so the map rewinds correctly.
+  // Live state keeps updating in the background; when replay exits, live state is already current.
+  const displayMapState = useMemo(() => {
+    if (!isReplaying || !replaySnapshot) return mapState;
+    const snap = replaySnapshot.payload;
+
+    const suppressionZones: Record<string, SuppressionZone> = {};
+    for (const z of snap.fire.suppression_zones ?? []) {
+      const id = `${z.type}-${z.center[0].toFixed(5)}-${z.center[1].toFixed(5)}`;
+      suppressionZones[id] = {
+        id,
+        geojson: z.geojson,
+        effectiveness: z.factor,
+        resource_type: z.type,
+      };
+    }
+
+    return {
+      ...mapState,
+      // Already-working overrides
+      firePerimeter: snap.fire.perimeter_geojson,
+      zones: snap.evacuation.zones,
+      shelters: snap.resources.shelters,
+      threatZones: {},
+      tripWaypoints: [],
+      particles: [],
+      recentActions: [],
+      resourceDispatches: [],
+      // New overrides
+      suppressionZones,
+      closedRoutes: new Set<string>(snap.evacuation.closed_routes ?? []),
+      routeCongestion: Object.fromEntries(
+        (snap.evacuation.route_congestion ?? []).map(r => [
+          r.route_id,
+          { status: r.status, load_pct: r.load_pct, reason: r.reason, capacity_multiplier: r.capacity_multiplier },
+        ])
+      ),
+      trafficJams: Object.fromEntries(
+        (snap.evacuation.traffic_jams ?? []).map(j => [j.route_id, j.severity])
+      ),
+      infrastructure: snap.infrastructure.facilities ?? {},
+      resources: (snap.resources.deployments ?? []).map(d => ({
+        type: d.type,
+        location: d.location,
+        count: d.count,
+      })),
+    };
+  }, [isReplaying, replaySnapshot, mapState]);
 
   useEffect(() => {
     connect();
@@ -346,6 +415,23 @@ export default function Home() {
     }
   }, [playbookActive]);
 
+  // Drag-to-resize map / agent feed split
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current || !mainContentRef.current) return;
+      const rect = mainContentRef.current.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      setMapWidth(Math.min(80, Math.max(20, pct)));
+    };
+    const onMouseUp = () => { isDraggingRef.current = false; };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
   // Fetch FIRMS data once on mount (show current real-world hot pixels)
   useEffect(() => {
     fetch(`${API_BASE}/api/firms`)
@@ -359,8 +445,9 @@ export default function Home() {
   // On mount: load scenario from sessionStorage, redirect to setup if missing
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem('ember_scenario');
+      const raw = sessionStorage.getItem('pyrotech_scenario');
       if (!raw) {
+        setPhase('idle');
         router.push('/');
         return;
       }
@@ -368,9 +455,10 @@ export default function Home() {
       const t = setTimeout(() => setStoredScenario(scenario), 0);
       return () => clearTimeout(t);
     } catch {
+      setPhase('idle');
       router.push('/');
     }
-  }, [router]);
+  }, [router, setPhase]);
 
   // Auto-start: once connected and storedScenario is loaded, launch the simulation
   const autoLaunched = useRef(false);
@@ -392,19 +480,22 @@ export default function Home() {
       ],
       timestamp: storedScenario.datetime + (storedScenario.datetime.endsWith('Z') ? '' : ':00Z'),
       fireOrigin: { lat: storedScenario.fireLat, lng: storedScenario.fireLng },
-      metrics: storedScenario.metrics ?? { wind: 35, temp: 85, humidity: 15 },
+      metrics: storedScenario.metrics ?? { windU: -11.066, windV: -11.066, temp: 85, humidity: 15 },
       initialAcres: storedScenario.initialAcres ?? 10,
       historical_mode: storedScenario.historical_mode ?? false,
       durationHours: storedScenario.durationHours ?? 6,
+      enableTts: storedScenario.enableTts ?? false,
     };
 
     reset();
+    hasMarkedReady.current = false;
+    setPhase('awaiting-snapshot');
     startSimulation(payload);
-    
+
     // Seed base data for this specific scenario
     const bust = `${storedScenario.city}-${Date.now()}`;
     seedBaseData(bust);
-  }, [isConnected, storedScenario, reset, startSimulation, seedBaseData]);
+  }, [isConnected, storedScenario, reset, startSimulation, seedBaseData, setPhase]);
 
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--background)' }}>
@@ -446,8 +537,11 @@ export default function Home() {
             letterSpacing: '0.1em',
             color: 'var(--accent)',
             margin: 0,
+            padding: '4px 14px',
+            background: 'radial-gradient(ellipse at center, oklch(45% 0.25 18 / 0.45) 0%, transparent 70%)',
+            textShadow: '0 0 16px oklch(55% 0.25 18 / 0.7), 0 0 32px oklch(45% 0.22 18 / 0.4)',
           }}>
-            EMBER
+            PYROTECH
           </h1>
           <span style={{
             fontFamily: 'var(--font-condensed)',
@@ -469,26 +563,30 @@ export default function Home() {
         )}
 
         <div className="flex items-center" style={{ gap: '10px' }}>
-          <button
-            onClick={toggleMute}
-            title={isMuted ? 'Unmute agent voices' : 'Mute agent voices'}
-            style={{
-              fontFamily: 'var(--font-condensed)',
-              fontSize: '0.65rem',
-              fontWeight: 600,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              border: '1px solid var(--border)',
-              borderRadius: '2px',
-              padding: '3px 8px',
-              background: 'transparent',
-              color: isMuted ? 'var(--accent-red)' : 'var(--accent-green)',
-              cursor: 'pointer',
-            }}
-          >
-            {isMuted ? 'Audio Off' : 'Audio On'}
-          </button>
-          <div style={{ width: '1px', height: '14px', background: 'var(--border)' }} />
+          {ttsMode && (
+            <>
+              <button
+                onClick={toggleMute}
+                title={isMuted ? 'Unmute agent voices' : 'Mute agent voices'}
+                style={{
+                  fontFamily: 'var(--font-condensed)',
+                  fontSize: '0.65rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  border: '1px solid var(--border)',
+                  borderRadius: '2px',
+                  padding: '3px 8px',
+                  background: 'transparent',
+                  color: isMuted ? 'var(--accent-red)' : 'var(--accent-green)',
+                  cursor: 'pointer',
+                }}
+              >
+                {isMuted ? 'Audio Off' : 'Audio On'}
+              </button>
+              <div style={{ width: '1px', height: '14px', background: 'var(--border)' }} />
+            </>
+          )}
           <span
             style={{
               width: '7px',
@@ -512,15 +610,16 @@ export default function Home() {
       </div>
 
       {/* Metrics Bar — shows replay snapshot when scrubbing, live snapshot otherwise */}
-      <MetricsBar snapshot={(isReplaying ? replaySnapshot : currentSnapshot)?.payload ?? null} simTimeString={simTimeString} />
+      <MetricsBar snapshot={(isReplaying ? replaySnapshot : currentSnapshot)?.payload ?? null} />
 
       {/* Main Content: Map + Agent Feed */}
-      <div className="flex min-h-0 flex-1">
-        {/* Map (60%) */}
-        <div className="relative" style={{ width: '60%' }}>
+      <div ref={mainContentRef} className="flex min-h-0 flex-1">
+        {/* Map */}
+        <div className="relative" style={{ width: `${mapWidth}%` }}>
           <MapView
-            mapState={mapState}
+            mapState={displayMapState}
             center={storedScenario ? { lat: storedScenario.centerLat, lng: storedScenario.centerLng } : undefined}
+            isReplaying={isReplaying}
           />
           <MapNotifications notifications={notifications} />
           {isRunning && (
@@ -551,10 +650,25 @@ export default function Home() {
           />
         </div>
 
-        {/* Agent Feed (40%) */}
+        {/* Resize handle */}
         <div
-          className="flex flex-col border-l"
-          style={{ width: '40%', borderColor: 'var(--border)' }}
+          onMouseDown={(e) => { e.preventDefault(); isDraggingRef.current = true; }}
+          style={{
+            width: '4px',
+            cursor: 'col-resize',
+            flexShrink: 0,
+            background: 'var(--border)',
+            transition: 'background 0.15s',
+            zIndex: 10,
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-purple)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'var(--border)')}
+        />
+
+        {/* Agent Feed */}
+        <div
+          className="flex flex-col"
+          style={{ width: `${100 - mapWidth}%`, borderColor: 'var(--border)' }}
         >
           <div
             className="border-b px-4 py-2"
@@ -602,8 +716,7 @@ export default function Home() {
         {isRunning ? (
           <>
             <SimControl label={isPaused ? 'Resume' : 'Pause'} onClick={() => { if (isPaused) { resume(); } else { pause(); } }} />
-            <SimControl label="Stop" danger onClick={stop} />
-            <SimControl label="Playbook" purple onClick={requestPlaybook} />
+            <SimControl label="Stop" danger onClick={() => { stop(); stopAudio(); }} />
           </>
         ) : (
           <>

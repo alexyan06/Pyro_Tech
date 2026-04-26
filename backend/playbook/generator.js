@@ -173,7 +173,7 @@ function generatePlaybook(sections, scenario, state = {}, metadata = {}, executi
   ];
 
   return {
-    title: 'EMBER INCIDENT RESPONSE PLAYBOOK',
+    title: 'PYROTECH INCIDENT RESPONSE PLAYBOOK',
     scenario: scenarioLabel,
     duration_hours: durationHours,
     sections: playbookSections,

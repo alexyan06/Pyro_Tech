@@ -1,6 +1,6 @@
-# Ember — AI Wildfire Incident Command Simulation
+# PyroTech — AI Wildfire Incident Command Simulation
 
-Ember is a real-time incident command platform that simulates wildfire response using a multi-agent orchestration layer powered by Google Gemini. It combines physics-based fire modeling with real-world geospatial data to provide a 3D decision-support dashboard.
+PyroTech is a real-time incident command platform that simulates wildfire response using a multi-agent orchestration layer powered by Google Gemini. It combines physics-based fire modeling with real-world geospatial data to provide a 3D decision-support dashboard.
 
 ## Overview
 
@@ -49,7 +49,7 @@ The simulation runs on a dual-loop system:
 
 ## Data Structure
 
-Ember uses a "merged geospatial state" model:
+PyroTech uses a "merged geospatial state" model:
 - **Pre-seeded data**: Baseline infrastructure for Los Angeles (Palisades area).
 - **Dynamic data**: Fetched for the specific bounding box of any city worldwide during the Setup phase.
 - **Spatial Intersections**: All infrastructure damage and route closures are calculated using real-time polygon intersections (`turf.js`).

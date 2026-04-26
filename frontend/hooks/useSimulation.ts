@@ -20,8 +20,9 @@ export interface BranchAgentMessage {
 
 interface UseSimulationOptions {
   onMapEvent?: (event: MapEventData, agent?: AgentName, uiMessage?: string) => void;
-  onAgentAudio?: (agent: AgentName, audioBase64: string) => void;
+  onAgentAudio?: (agent: AgentName, audioBase64: string, tick: number) => void;
   onStateSnapshot?: (snap: StateSnapshot) => void;
+  onSimulationReady?: () => void;
   onParticleUpdate?: (particles: [number, number][], trips?: TripWaypoint[]) => void;
 }
 
@@ -63,6 +64,7 @@ export function useSimulation(options: UseSimulationOptions = {}) {
   const onMapEventRef = useRef(options.onMapEvent);
   const onAgentAudioRef = useRef(options.onAgentAudio);
   const onStateSnapshotRef = useRef(options.onStateSnapshot);
+  const onSimulationReadyRef = useRef(options.onSimulationReady);
   const onParticleUpdateRef = useRef(options.onParticleUpdate);
 
   // Independent client-side clock: ticks forward at a fixed rate (60x)
@@ -75,8 +77,9 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     onMapEventRef.current = options.onMapEvent;
     onAgentAudioRef.current = options.onAgentAudio;
     onStateSnapshotRef.current = options.onStateSnapshot;
+    onSimulationReadyRef.current = options.onSimulationReady;
     onParticleUpdateRef.current = options.onParticleUpdate;
-  }, [options.onMapEvent, options.onAgentAudio, options.onStateSnapshot, options.onParticleUpdate]);
+  }, [options.onMapEvent, options.onAgentAudio, options.onStateSnapshot, options.onSimulationReady, options.onParticleUpdate]);
 
   /** Extract agent_confidence score from a completed agent message */
   function extractConfidence(text: string): number | null {
@@ -190,14 +193,18 @@ export function useSimulation(options: UseSimulationOptions = {}) {
           break;
         }
 
+        case 'simulation_ready':
+          onSimulationReadyRef.current?.();
+          break;
+
         case 'playbook_ready':
           setPlaybook((msg.payload as { playbook_json: PlaybookData }).playbook_json);
           setIsRunning(false);
           break;
 
         case 'agent_audio': {
-          const { agent, audio_base64 } = msg.payload as { agent: AgentName; audio_base64: string };
-          onAgentAudioRef.current?.(agent, audio_base64);
+          const { agent, audio_base64, tick } = msg.payload as { agent: AgentName; audio_base64: string; tick: number };
+          onAgentAudioRef.current?.(agent, audio_base64, tick);
           break;
         }
 
@@ -289,6 +296,7 @@ export function useSimulation(options: UseSimulationOptions = {}) {
           initialAcres: input.initialAcres ?? 10,
           historical_mode: input.historical_mode ?? false,
           durationHours: input.durationHours ?? 6,
+          enableTts:     input.enableTts ?? false,
         },
       });
       setIsRunning(true);
@@ -323,6 +331,21 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     branchBufferRef.current = new Map();
   }, []);
 
+  const sendAudioDone = useCallback((agent: AgentName, tick: number) => {
+    send({ type: 'audio_done', payload: { agent, tick } });
+  }, [send]);
+
+  // Stop simulation and close WS when the dashboard unmounts (navigation away, browser back).
+  useEffect(() => {
+    return () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'control', payload: { action: 'stop' } }));
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, []);
+
   return {
     isConnected, isRunning,
     agentMessages, timeline, currentAgent, currentText,
@@ -333,5 +356,6 @@ export function useSimulation(options: UseSimulationOptions = {}) {
     connect, disconnect, startSimulation,
     pause, resume, stop, isPaused, requestPlaybook,
     startBranch, clearBranch,
+    sendAudioDone,
   };
 }

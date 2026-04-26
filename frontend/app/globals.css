@@ -26,7 +26,7 @@
   --accent-purple: oklch(66% 0.18 292);
   --accent-orange: oklch(68% 0.18 45);
 
-  /* Brand accent — ember amber */
+  /* Brand accent — incident amber */
   --accent: oklch(68% 0.18 45);
 
   /* Typography */
@@ -92,4 +92,11 @@ body {
 @keyframes cursor-blink {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0; }
+}
+
+/* Ember particles for loading screen */
+@keyframes ember-rise {
+  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0.9; }
+  50%  { transform: translateY(-45vh) translateX(var(--drift)) scale(0.55); opacity: 0.55; }
+  100% { transform: translateY(-95vh) translateX(calc(var(--drift) * 1.8)) scale(0.15); opacity: 0; }
 }

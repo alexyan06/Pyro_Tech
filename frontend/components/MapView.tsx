@@ -1,6 +1,6 @@
 'use client';
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
-import Map, { Source } from 'react-map-gl/mapbox';
+import Map, { Source, type MapRef } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import DeckGL from '@deck.gl/react';
 import { GeoJsonLayer, PathLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
@@ -16,10 +16,12 @@ import { createInfrastructureLayer } from './layers/infrastructureLayer';
 import { createShelterLayer } from './layers/shelterLayer';
 import { createResourceLayer } from './layers/resourceLayer';
 import MapLegend from './MapLegend';
+import WindCanvas from './WindCanvas';
 
 interface MapViewProps {
   mapState: MapState;
   center?: { lat: number; lng: number };
+  isReplaying?: boolean;
 }
 
 interface ZoneFeature {
@@ -228,11 +230,13 @@ const MapOverlay = memo(function MapOverlay({
   staticLayers,
   viewState,
   firePerimeter,
+  isReplaying,
 }: {
   mapState: MapState,
   staticLayers: Layer[],
   viewState: Record<string, unknown>,
   firePerimeter: GeoJSON.FeatureCollection | null,
+  isReplaying?: boolean,
 }) {
   const [animTime, setAnimTime] = useState(0);
   const [wallClockMs, setWallClockMs] = useState(0);
@@ -251,12 +255,15 @@ const MapOverlay = memo(function MapOverlay({
   const hasFirePerimeter = (firePerimeter?.features?.length ?? 0) > 0;
   const hasAnimated = hasFirePerimeter || (mapState.resourceDispatches?.length ?? 0) > 0 || mapState.tripWaypoints.length > 0 || mapState.recentActions.length > 0;
 
-  // When a new perimeter arrives, save the current lerped position as start point
+
+  // When a new perimeter arrives, save the current lerped position as start point.
+  // During replay, snap immediately (prevPerim = target) to avoid spike artifacts
+  // from lerping a large live perimeter backward to a small historical one.
   useEffect(() => {
-    prevPerimRef.current = lerpedPerimRef.current ?? firePerimeter;
+    prevPerimRef.current = isReplaying ? firePerimeter : (lerpedPerimRef.current ?? firePerimeter);
     nextPerimRef.current = firePerimeter;
     perimUpdateTimeRef.current = Date.now();
-  }, [firePerimeter]);
+  }, [firePerimeter, isReplaying]);
 
   useEffect(() => {
     if (!hasAnimated) {
@@ -535,7 +542,7 @@ const MapOverlay = memo(function MapOverlay({
   );
 });
 
-export default function MapView({ mapState, center }: MapViewProps) {
+export default function MapView({ mapState, center, isReplaying }: MapViewProps) {
   const [viewState, setViewState] = useState({
     longitude: center?.lng ?? LA_CENTER[0],
     latitude: center?.lat ?? LA_CENTER[1],
@@ -545,6 +552,18 @@ export default function MapView({ mapState, center }: MapViewProps) {
   });
 
   const centeredRef = useRef(false);
+  const mapRef = useRef<MapRef>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      mapRef.current?.getMap().resize();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const setProgrammaticView = useCallback((lat: number, lng: number) => {
     setViewState(prev => ({ ...prev, latitude: lat, longitude: lng }));
@@ -558,44 +577,6 @@ export default function MapView({ mapState, center }: MapViewProps) {
     }
   }, [center, setProgrammaticView]);
 
-  const fireBehaviorLayer = useMemo(() => {
-    const behavior = mapState.fireBehavior;
-    if (!behavior?.origin || !behavior.head) return null;
-
-    const features: GeoJSON.Feature[] = [
-      {
-        type: 'Feature',
-        properties: { kind: 'wind-vector', ...behavior },
-        geometry: {
-          type: 'LineString',
-          coordinates: [behavior.origin, behavior.head],
-        },
-      },
-      {
-        type: 'Feature',
-        properties: { kind: 'wind-head', ...behavior },
-        geometry: {
-          type: 'Point',
-          coordinates: behavior.head,
-        },
-      },
-    ];
-
-    return new GeoJsonLayer<GeoJSON.Feature>({
-      id: 'fire-behavior-vector',
-      data: features,
-      stroked: true,
-      filled: true,
-      pointType: 'circle',
-      getLineColor: [255, 190, 80, 230],
-      getLineWidth: 4,
-      lineWidthUnits: 'pixels',
-      getPointRadius: 8,
-      pointRadiusUnits: 'pixels',
-      getFillColor: [255, 235, 120, 230],
-      getText: () => '',
-    });
-  }, [mapState.fireBehavior]);
 
   // ── Evacuation zone polygons ───────────────────────────────────────────────
   const zoneLayer = useMemo(() => {
@@ -672,14 +653,13 @@ export default function MapView({ mapState, center }: MapViewProps) {
   const staticLayers = useMemo(() => [
     populationPointLayer,
     firmsLayer,
-    fireBehaviorLayer,
     zoneLayer,
     routeLayer,
     ...infrastructureLayers,
     ...shelterLayers,
     ...(resourceLayer || []),
   ].filter((l) => l !== null) as Layer[], [
-    populationPointLayer, firmsLayer, zoneLayer, routeLayer, fireBehaviorLayer,
+    populationPointLayer, firmsLayer, zoneLayer, routeLayer,
     infrastructureLayers, shelterLayers, resourceLayer
   ]);
 
@@ -695,8 +675,9 @@ export default function MapView({ mapState, center }: MapViewProps) {
   }
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-lg">
+    <div ref={containerRef} className="relative h-full w-full overflow-hidden rounded-lg">
       <Map
+        ref={mapRef}
         {...viewState}
         onMove={(evt) => setViewState(evt.viewState)}
         mapboxAccessToken={MAPBOX_TOKEN}
@@ -747,11 +728,21 @@ export default function MapView({ mapState, center }: MapViewProps) {
         />
       </Map>
 
+      {mapState.fireBehavior && (
+        <WindCanvas
+          windU={mapState.fireBehavior.wind_u}
+          windV={mapState.fireBehavior.wind_v}
+          mapBearing={viewState.bearing}
+          mapPitch={viewState.pitch}
+        />
+      )}
+
       <MapOverlay
         mapState={mapState}
         staticLayers={staticLayers}
         viewState={viewState}
         firePerimeter={mapState.firePerimeter}
+        isReplaying={isReplaying}
       />
 
       <MapLegend />

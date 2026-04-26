@@ -51,12 +51,13 @@ wss.on('connection', (ws) => {
         const { location, bbox, timestamp, fireOrigin, metrics, initialAcres } = payload;
         const durationHours = payload.durationHours ?? 6;
         const historical_mode = payload.historical_mode === true;
-        console.log(`[Server] Starting simulation: "${location}" origin=(${fireOrigin.lat},${fireOrigin.lng}) duration=${durationHours}h historical=${historical_mode}`);
+        const enableTts = payload.enableTts === true;
+        console.log(`[Server] Starting simulation: "${location}" origin=(${fireOrigin.lat},${fireOrigin.lng}) duration=${durationHours}h historical=${historical_mode} tts=${enableTts}`);
         const sequencer = new TurnSequencer(sendToClient);
         activeSimulations.set(ws, sequencer);
 
         try {
-          await sequencer.runSimulation({ location, bbox, timestamp, fireOrigin, metrics, initialAcres, durationHours }, ws, { historical_mode });
+          await sequencer.runSimulation({ location, bbox, timestamp, fireOrigin, metrics, initialAcres, durationHours }, ws, { historical_mode, enableTts });
         } catch (err) {
           console.error('[Server] Simulation error:', err);
           sendToClient(ws, { type: 'error', payload: { message: err.message } });
@@ -103,6 +104,13 @@ wss.on('connection', (ws) => {
         break;
       }
 
+      case 'audio_done': {
+        const sequencer = activeSimulations.get(ws);
+        const { agent, tick } = msg.payload ?? {};
+        if (sequencer) sequencer._resolveAudioAck(agent, tick);
+        break;
+      }
+
       default:
         sendToClient(ws, { type: 'error', payload: { message: `Unknown message type: ${msg.type}` } });
     }
@@ -122,9 +130,9 @@ async function start() {
   await initRedis();
 
   server.listen(PORT, () => {
-    console.log(`[Ember] Server running on port ${PORT}`);
-    console.log(`[Ember] WebSocket ready on ws://localhost:${PORT}`);
-    console.log(`[Ember] Health check: http://localhost:${PORT}/api/health`);
+    console.log(`[PyroTech] Server running on port ${PORT}`);
+    console.log(`[PyroTech] WebSocket ready on ws://localhost:${PORT}`);
+    console.log(`[PyroTech] Health check: http://localhost:${PORT}/api/health`);
   });
 }
 

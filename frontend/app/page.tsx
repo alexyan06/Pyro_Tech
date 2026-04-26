@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLoading } from '@/lib/loadingState';
 
 const API_BASE = process.env.NEXT_PUBLIC_WS_URL?.replace(/^ws/, 'http') ?? 'http://localhost:4000';
 
@@ -18,6 +19,29 @@ const PRESETS = [
     durationHours: '6',
   },
 ] as const;
+
+const EMBERS = [
+  { left: 12, delay: 0.0, duration: 3.8, size: 5, drift: -22, color: '#f97316' },
+  { left: 27, delay: 0.6, duration: 4.5, size: 4, drift:  18, color: '#ef4444' },
+  { left: 41, delay: 1.1, duration: 3.2, size: 6, drift: -35, color: '#fb923c' },
+  { left: 55, delay: 0.3, duration: 5.0, size: 3, drift:  28, color: '#fbbf24' },
+  { left: 68, delay: 1.7, duration: 3.6, size: 5, drift: -14, color: '#f97316' },
+  { left: 80, delay: 0.9, duration: 4.2, size: 4, drift:  38, color: '#ef4444' },
+  { left: 19, delay: 2.1, duration: 3.9, size: 3, drift:  20, color: '#fb923c' },
+  { left: 35, delay: 1.4, duration: 4.8, size: 6, drift: -28, color: '#fbbf24' },
+  { left: 49, delay: 0.2, duration: 3.5, size: 4, drift:  16, color: '#f97316' },
+  { left: 63, delay: 2.5, duration: 4.1, size: 5, drift: -40, color: '#ef4444' },
+  { left: 75, delay: 0.7, duration: 3.3, size: 3, drift:  30, color: '#fb923c' },
+  { left:  8, delay: 1.9, duration: 5.2, size: 4, drift: -18, color: '#fbbf24' },
+  { left: 22, delay: 3.0, duration: 3.7, size: 6, drift:  24, color: '#f97316' },
+  { left: 46, delay: 2.3, duration: 4.4, size: 3, drift: -32, color: '#ef4444' },
+  { left: 58, delay: 0.5, duration: 3.1, size: 5, drift:  12, color: '#fb923c' },
+  { left: 71, delay: 1.6, duration: 4.7, size: 4, drift: -26, color: '#fbbf24' },
+  { left: 87, delay: 2.8, duration: 3.4, size: 3, drift:  36, color: '#f97316' },
+  { left: 32, delay: 0.4, duration: 4.0, size: 5, drift: -10, color: '#ef4444' },
+  { left: 90, delay: 1.2, duration: 5.5, size: 4, drift:  22, color: '#fb923c' },
+  { left:  4, delay: 3.3, duration: 3.6, size: 6, drift: -38, color: '#fbbf24' },
+];
 
 const SYSTEMS = [
   { label: 'Fire Behavior Analysis',    color: '#e05555' },
@@ -38,6 +62,7 @@ interface FormState {
   windSpeed: string;
   windDirection: string;
   durationHours: string;
+  enableTts: boolean;
 }
 
 function bearingToCardinal(deg: number): string {
@@ -47,6 +72,7 @@ function bearingToCardinal(deg: number): string {
 
 export default function SetupPage() {
   const router = useRouter();
+  const { setPhase } = useLoading();
   const [form, setForm] = useState<FormState>({
     city: '',
     datetime: new Date().toISOString().slice(0, 16),
@@ -56,6 +82,7 @@ export default function SetupPage() {
     windSpeed: '35',
     windDirection: '45',
     durationHours: '6',
+    enableTts: false,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +92,7 @@ export default function SetupPage() {
     const p = PRESETS.find((x) => x.label === label);
     if (!p) return;
     setPreset(label);
-    setForm({
+    setForm(f => ({
       city: p.city,
       datetime: p.datetime,
       lat: p.lat,
@@ -74,7 +101,8 @@ export default function SetupPage() {
       windSpeed: p.windSpeed,
       windDirection: p.windDirection,
       durationHours: p.durationHours,
-    });
+      enableTts: f.enableTts,
+    }));
   }
 
   function update(key: keyof FormState, value: string) {
@@ -87,9 +115,15 @@ export default function SetupPage() {
     setError(null);
     if (!form.city.trim()) { setError('Location required.'); return; }
     setLoading(true);
+    setPhase('setup');
     try {
-      const windSpeed = Number.parseFloat(form.windSpeed);
-      const windDirection = Number.parseFloat(form.windDirection);
+      const windSpeedMph = Number.parseFloat(form.windSpeed);
+      const windFromDeg = Number.parseFloat(form.windDirection);
+      // Convert UI (mph + FROM degrees) to U/V components (m/s) for unambiguous backend storage
+      const _speedMs = (Number.isFinite(windSpeedMph) ? windSpeedMph : 35) * 0.44704;
+      const _rad = (Number.isFinite(windFromDeg) ? windFromDeg : 45) * Math.PI / 180;
+      const windU = parseFloat((-_speedMs * Math.sin(_rad)).toFixed(4));
+      const windV = parseFloat((-_speedMs * Math.cos(_rad)).toFixed(4));
       const res = await fetch(`${API_BASE}/api/setup-scenario`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,22 +133,24 @@ export default function SetupPage() {
           fireLat: parseFloat(form.lat) || null,
           fireLng: parseFloat(form.lng) || null,
           initialAcres: parseFloat(form.acres) || 10,
-          windSpeed: Number.isFinite(windSpeed) ? windSpeed : 35,
-          windDirection: Number.isFinite(windDirection) ? windDirection : 45,
+          windU,
+          windV,
           durationHours: parseFloat(form.durationHours) || 6,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Setup failed');
 
-      (window as unknown as Record<string, unknown>).__EMBER_GEOJSON_PROMISE__ = fetch(`${API_BASE}/api/geojson-bundle`, { cache: 'no-store' })
+      (window as unknown as Record<string, unknown>).__PYROTECH_GEOJSON_PROMISE__ = fetch(`${API_BASE}/api/geojson-bundle`, { cache: 'no-store' })
         .then(r => r.ok ? r.json() : null)
         .catch(() => null);
 
-      sessionStorage.setItem('ember_scenario', JSON.stringify(data));
+      sessionStorage.setItem('pyrotech_scenario', JSON.stringify({ ...data, enableTts: form.enableTts }));
+      setPhase('connecting');
       router.push('/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error');
+      setPhase('idle');
     } finally {
       setLoading(false);
     }
@@ -123,6 +159,36 @@ export default function SetupPage() {
   return (
     <div className="sp-root">
       <div className="sp-scan" aria-hidden="true" />
+      {/* Subtle warm glow at bottom edge */}
+      <div aria-hidden="true" style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '180px',
+        background: 'radial-gradient(ellipse 80% 100% at 50% 100%, oklch(65% 0.22 25 / 0.14) 0%, oklch(55% 0.20 25 / 0.05) 45%, transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+      {/* Ember particles */}
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        {EMBERS.map((e, i) => (
+          <span
+            key={i}
+            style={{
+              position: 'absolute',
+              bottom: '-10px',
+              left: `${e.left}%`,
+              width: `${e.size}px`,
+              height: `${e.size}px`,
+              borderRadius: '50%',
+              background: e.color,
+              boxShadow: `0 0 ${e.size * 2}px ${e.color}`,
+              animation: `ember-rise ${e.duration}s ease-in ${e.delay}s infinite`,
+              ['--drift' as string]: `${e.drift}px`,
+            }}
+          />
+        ))}
+      </div>
       <div className="sp-particles" aria-hidden="true">
         {Array.from({ length: 16 }).map((_, i) => (
           <div key={i} className="sp-particle" style={{ '--i': i } as React.CSSProperties} />
@@ -132,8 +198,8 @@ export default function SetupPage() {
       <main className="sp-main">
         {/* Left: Identity */}
         <div className="sp-left">
-          <div className="sp-ics-tag">ICS-EMBER-1 · Training Scenario</div>
-          <h1 className="sp-title">EMBER</h1>
+          <div className="sp-ics-tag">ICS-PYROTECH-1 · Training Scenario</div>
+          <h1 className="sp-title">PYROTECH</h1>
           <p className="sp-desc">
             Multi-agent AI incident command simulation. Configure a U.S. wildfire scenario
             and deploy seven specialized AI systems to model coordinated disaster response
@@ -306,6 +372,20 @@ export default function SetupPage() {
                 <span className="sp-hint">~30 seconds of real time per simulated hour</span>
               </div>
 
+              <div className="sp-field">
+                <label className="sp-tts-row" htmlFor="enableTts">
+                  <input
+                    id="enableTts"
+                    type="checkbox"
+                    className="sp-tts-check"
+                    checked={form.enableTts}
+                    onChange={(e) => setForm(f => ({ ...f, enableTts: e.target.checked }))}
+                  />
+                  <span className="sp-fl" style={{ margin: 0 }}>Sequential agent voice transmission</span>
+                </label>
+                <span className="sp-hint">Each agent waits for the previous radio call to finish. Muting is allowed but does not skip the queue.</span>
+              </div>
+
               {error && (
                 <div className="sp-error" role="alert">
                   <span className="sp-error-mark" aria-hidden="true">!</span>
@@ -421,7 +501,27 @@ export default function SetupPage() {
           line-height: 0.88;
           margin: 0 0 1.1rem;
           color: var(--accent);
-          text-shadow: 0 0 80px oklch(68% 0.18 45 / 0.22);
+          text-shadow: 0 0 60px oklch(55% 0.25 18 / 0.4), 0 0 120px oklch(45% 0.22 18 / 0.2);
+          position: relative;
+          display: inline-block;
+          isolation: isolate;
+        }
+        .sp-title::before {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 600px;
+          height: 280px;
+          background: radial-gradient(
+            ellipse at center,
+            oklch(50% 0.25 20 / 0.28) 0%,
+            oklch(40% 0.22 18 / 0.12) 45%,
+            transparent 70%
+          );
+          pointer-events: none;
+          z-index: -1;
         }
 
         .sp-desc {
@@ -501,6 +601,8 @@ export default function SetupPage() {
         }
         .sp-sublabel { font-size: 0.66rem; letter-spacing: 0.06em; color: var(--text-secondary); }
         .sp-hint { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
+        .sp-tts-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .sp-tts-check { width: 14px; height: 14px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
 
         .sp-input {
           background: var(--background);
