@@ -379,7 +379,9 @@ class StateManager {
       location: event.location,
       dispatch_path: event.dispatch_path,
       departed_elapsed_hours: event.elapsed_hours,
-      arrival_elapsed_hours: event.arrival_elapsed_hours || (event.elapsed_hours + (event.travel_hours || 0.15)),
+      arrival_elapsed_hours: Number.isFinite(Number(event.arrival_elapsed_hours))
+        ? Number(event.arrival_elapsed_hours)
+        : event.elapsed_hours + (event.travel_hours || 0.15),
       metadata: {
         assignment: event.assignment,
         source_agent: event.source_agent || event.agent,
@@ -642,7 +644,7 @@ class StateManager {
     const startsElapsedHours = Number.isFinite(Number(group.arrivalElapsedHours))
       ? Number(group.arrivalElapsedHours)
       : elapsedHours;
-    const targetBearingDeg = this._suppressionZoneBearing(group.destination);
+    const targetBearingDeg = this._suppressionZoneBearing(group.destination, group.type);
     const assignment = createAssignment({
       id: `${group.id}-assignment`,
       type: this._assignmentTypeForGroup(group),
@@ -692,6 +694,11 @@ class StateManager {
       id: effect.id,
       geojson: effect.geojson,
       visual_geojson: effect.visual_geojson,
+      line_geojson: effect.line_geojson,
+      barrier_geojson: effect.barrier_geojson,
+      barrier_width_km: effect.barrier_width_km,
+      line_start: effect.line_start,
+      line_end: effect.line_end,
       factor: effect.factor,
       type: effect.resource_type || effect.resourceType || group.type,
       resource_type: effect.resource_type || effect.resourceType || group.type,
@@ -823,8 +830,12 @@ class StateManager {
     });
   }
 
-  _suppressionZoneBearing(location) {
+  _suppressionZoneBearing(location, resourceType = null) {
     const props = this.state.fire.perimeter_geojson?.features?.[0]?.properties || {};
+    const windBearing = Number(props.wind_bearing ?? this.state.fire.spread_bearing ?? this.state.scenario?.metrics?.windDirection);
+    if (normalizeResourceType(resourceType) === 'dozer' && Number.isFinite(windBearing)) {
+      return ((windBearing % 360) + 360) % 360;
+    }
     const origin = Array.isArray(props.origin)
       ? props.origin
       : this.state.scenario?.fireOrigin
@@ -855,6 +866,7 @@ class StateManager {
   _suppressionVisualGeoJson(zone) {
     if (!zone || !Array.isArray(zone.center)) return zone?.geojson;
     if (zone.type === 'dozer') {
+      if (zone.line_geojson) return zone.line_geojson;
       const bearing = Number.isFinite(Number(zone.bearing_deg)) ? Number(zone.bearing_deg) : 0;
       const lengthKm = Math.max(0.6, Math.min(1.6, Number(zone.radius_km) || 1.0));
       const lateral = (bearing + 90) % 360;

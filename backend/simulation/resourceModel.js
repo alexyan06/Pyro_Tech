@@ -52,6 +52,7 @@ const RESOURCE_CAPABILITIES = Object.freeze({
     ttlHours: 1.6,
     sectorDegrees: 55,
     cutDepthKm: 0.45,   // deeper cut depth for stronger hard cap
+    barrierWidthKm: 0.08,
   }),
 });
 
@@ -240,18 +241,36 @@ function assignmentToSuppressionEffect(assignment, groups = [], elapsedHours = n
     ),
   );
   const factor = baseFactor * profile.factorScale;
+  const isDozerLine = type === ASSIGNMENT_TYPES.DOZER_LINE;
 
   // Cache geometry on the assignment to avoid repeated turf.buffer calls every tick
-  if (!assignment._cachedPhysicalGeojson) {
+  if (isDozerLine) {
+    if (!assignment._cachedLineGeojson) {
+      assignment._cachedLineGeojson = buildDozerLineGeometry(
+        assignment.target,
+        assignment.targetBearingDeg,
+        radiusKm,
+        lineProgress,
+      );
+    }
+    if (!assignment._cachedPhysicalGeojson) {
+      assignment._cachedPhysicalGeojson = buildDozerBarrierGeometry(
+        assignment._cachedLineGeojson,
+        capabilities.barrierWidthKm,
+      );
+    }
+  } else if (!assignment._cachedPhysicalGeojson) {
     assignment._cachedPhysicalGeojson = buildEngineAreaGeometry(assignment.target, radiusKm);
   }
   if (!assignment._cachedVisualGeojson) {
-    assignment._cachedVisualGeojson = type === ASSIGNMENT_TYPES.DOZER_LINE
-      ? buildDozerLineGeometry(assignment.target, assignment.targetBearingDeg, radiusKm, lineProgress)
+    assignment._cachedVisualGeojson = isDozerLine
+      ? assignment._cachedLineGeojson
       : buildEngineAreaGeometry(assignment.target, Math.max(0.12, Math.min(0.32, radiusKm * 0.22)));
   }
   const physicalGeojson = assignment._cachedPhysicalGeojson;
   const visualGeojson = assignment._cachedVisualGeojson;
+  const lineGeojson = assignment._cachedLineGeojson || null;
+  const lineCoords = lineGeojson?.geometry?.coordinates || null;
 
   return {
     id: assignment.effectId || assignment.effect_id || `${assignment.id}-effect`,
@@ -262,6 +281,11 @@ function assignmentToSuppressionEffect(assignment, groups = [], elapsedHours = n
     resource_type: resourceType,
     geojson: physicalGeojson,
     visual_geojson: visualGeojson,
+    line_geojson: lineGeojson,
+    barrier_geojson: isDozerLine ? physicalGeojson : null,
+    barrier_width_km: isDozerLine ? capabilities.barrierWidthKm : 0,
+    line_start: Array.isArray(lineCoords?.[0]) ? lineCoords[0] : null,
+    line_end: Array.isArray(lineCoords?.[1]) ? lineCoords[1] : null,
     factor,
     center: assignment.target,
     bearing_deg: finiteNumberOrNull(assignment.targetBearingDeg ?? assignment.target_bearing_deg),
@@ -311,12 +335,31 @@ function buildDozerLineGeometry(center, bearingDeg, radiusKm, progress = 1) {
       type: 'dozer_line',
       resource_type: RESOURCE_TYPES.DOZER,
       progress: clamp(progress, 0, 1),
+      bearing_deg: bearing,
+      orientation_deg: lateral,
     },
     geometry: {
       type: 'LineString',
       coordinates: [start, builtEnd],
     },
   };
+}
+
+function buildDozerBarrierGeometry(lineGeojson, widthKm) {
+  try {
+    const buffered = turf.buffer(lineGeojson, Math.max(0.02, widthKm), { units: 'kilometers' });
+    return {
+      ...buffered,
+      properties: {
+        ...(buffered.properties || {}),
+        type: 'dozer_barrier',
+        resource_type: RESOURCE_TYPES.DOZER,
+        barrier_width_km: widthKm,
+      },
+    };
+  } catch (_) {
+    return lineGeojson;
+  }
 }
 
 function normalizeLngLat(value) {

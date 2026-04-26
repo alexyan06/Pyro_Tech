@@ -101,9 +101,8 @@ export function dispatchMapEvent(
         });
       }
 
-      // Auto-deploy the green icon + suppression zone when the travel animation finishes.
-      // This is independent of the backend resource_update — ensures icons and work visuals
-      // always appear even if the backend event is delayed or lost.
+      // Auto-deploy only the active resource icon when the travel animation finishes.
+      // Suppression work visuals are backend-authoritative and arrive via suppression_zone.
       const deployDelay = durationMs ?? 4000;
       const loc = event.location;
       const resType = event.resource_type;
@@ -118,59 +117,6 @@ export function dispatchMapEvent(
             count: cnt,
             groupId,
           });
-          // Show a visual suppression zone so the user sees the resource is working.
-          // Dozers get a containment line, engines get a small work area.
-          const isDozer = resType.toLowerCase().includes('dozer');
-          const zoneId = `${groupId}-suppression`;
-          if (isDozer) {
-            // Dozer containment line — short line segment perpendicular to fire bearing
-            const lineLen = 0.012; // ~1.3km in degrees
-            dispatch({
-              type: 'ADD_SUPPRESSION_ZONE',
-              zone: {
-                id: zoneId,
-                geojson: {
-                  type: 'Feature',
-                  properties: { type: 'dozer_line', resource_type: 'dozer' },
-                  geometry: {
-                    type: 'LineString',
-                    coordinates: [
-                      [loc[0] - lineLen / 2, loc[1]],
-                      [loc[0] + lineLen / 2, loc[1]],
-                    ],
-                  },
-                },
-                resource_type: 'dozer',
-                effectiveness: 0.88,
-                progress: 1,
-                line_progress: 1,
-                effect_type: 'dozer_line',
-              },
-            });
-          } else {
-            // Engine work area — small circle around position
-            const r = 0.003; // ~330m in degrees
-            const pts = 16;
-            const ring = Array.from({ length: pts + 1 }, (_, i) => {
-              const a = (i / pts) * 2 * Math.PI;
-              return [loc[0] + r * Math.cos(a), loc[1] + r * Math.sin(a) * 0.85];
-            });
-            dispatch({
-              type: 'ADD_SUPPRESSION_ZONE',
-              zone: {
-                id: zoneId,
-                geojson: {
-                  type: 'Feature',
-                  properties: { resource_type: 'engine' },
-                  geometry: { type: 'Polygon', coordinates: [ring] },
-                },
-                resource_type: 'engine',
-                effectiveness: 0.65,
-                progress: 0,
-                effect_type: 'engine_area',
-              },
-            });
-          }
         }
       }, deployDelay);
       break;

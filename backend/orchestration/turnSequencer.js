@@ -700,14 +700,7 @@ class TurnSequencer {
     const windBearing = props.wind_bearing || this.stateManager.state.fire.spread_bearing || 0;
     const perimeterReady = fireFeature?.geometry?.type === 'Polygon';
 
-    // Distribute evenly across 360 degrees. Dozers start at wind head, engines start at tail.
-    const spreadAngle = 360 / 8; // Distribute at 45 degree intervals
-    const baseBearing = resourceType === 'dozer' ? windBearing : (windBearing + 180) % 360;
-    
-    // index 0 -> 0, index 1 -> +45, index 2 -> -45, index 3 -> +90, etc.
-    const sign = index % 2 === 0 ? 1 : -1;
-    const mag = Math.ceil(index / 2) * spreadAngle;
-    const bearing = (baseBearing + sign * mag + 360) % 360;
+    const bearing = this._resourceStagingBearing(resourceType, windBearing, index);
 
     if (perimeterReady) {
       const edge = this._perimeterPointAtBearing(fireFeature, bearing);
@@ -719,6 +712,15 @@ class TurnSequencer {
     const origin = this.stateManager.state.scenario?.fireOrigin;
     const base = origin ? [origin.lng, origin.lat] : [-118.24, 34.05];
     return this._pointAtBearingAndDistance(base, bearing, resourceType === 'dozer' ? 2.0 : 1.2);
+  }
+
+  _resourceStagingBearing(resourceType, windBearing, index = 0) {
+    const normalizedWind = ((Number(windBearing) || 0) % 360 + 360) % 360;
+    const dozerOffsets = [0, -25, 25, -50, 50, -75, 75];
+    const engineOffsets = [90, -90, 115, -115, 65, -65, 180, 135, -135];
+    const offsets = resourceType === 'dozer' ? dozerOffsets : engineOffsets;
+    const offset = offsets[index % offsets.length] + Math.floor(index / offsets.length) * 18;
+    return (normalizedWind + offset + 360) % 360;
   }
 
   _resourceCountFor(resourceType, elapsedHours = 0) {

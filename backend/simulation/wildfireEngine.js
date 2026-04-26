@@ -90,9 +90,14 @@ class WildfireEngine {
 
     const numPoints = this.sectorCount;
     const coordinates = [];
+    const previousSectorPoints = new Array(numPoints);
     const nextSectorDistances = new Array(numPoints);
     const nextSectorBearings = new Array(numPoints);
     const nextRawDistances = new Array(numPoints);
+    const suppressionStats = {
+      dozer_barrier_hits: 0,
+      engine_sector_hits: 0,
+    };
     const windRad = (this.windBearing * Math.PI) / 180;
     const center = this._pointAtBearingAndDistance(
       this.ignition,
@@ -128,6 +133,12 @@ class WildfireEngine {
       const rawDistanceKm = Math.max(0.02, this._distanceKm(this.ignition, projectedPoint));
       const previousDistanceKm = this._previousSectorDistance(i, tick);
       const previousBearing = this._sectorBearingsDeg?.[i];
+      const previousPoint = this._pointAtBearingAndDistance(
+        this.ignition,
+        Number.isFinite(previousBearing) ? previousBearing : rawBearing,
+        previousDistanceKm,
+      );
+      previousSectorPoints[i] = previousPoint;
       // Cap growth delta to the natural formula increment so suppression-pulled sectors
       // don't see a large catch-up jump that overwhelms engine direct attack.
       const prevRawDistanceKm = this._lastRawDistancesKm?.[i] ?? rawDistanceKm;
@@ -152,6 +163,7 @@ class WildfireEngine {
       // perimeter back each tick.  This is the primary extinguish mechanism — it works
       // even when combined suppression never reaches the 0.95 threshold.
       const enginePullback = this._engineDirectAttack(suppressionProbe, rawBearing, tick, suppressionZones, zoneCenters);
+      if (enginePullback > 0.0001) suppressionStats.engine_sector_hits += 1;
       growthKm -= enginePullback;
 
       // Secondary: overwhelming combined suppression causes additional shrinkage.
@@ -161,10 +173,26 @@ class WildfireEngine {
       }
 
       const uncappedDistanceKm = previousDistanceKm + growthKm;
+      const uncappedPoint = this._pointAtBearingAndDistance(
+        this.ignition,
+        rawBearing,
+        Math.max(0.02, uncappedDistanceKm),
+      );
+      const dozerBarrierLimit = this._dozerBarrierLimitDistance(
+        previousPoint,
+        uncappedPoint,
+        previousDistanceKm,
+        Math.max(previousDistanceKm, uncappedDistanceKm),
+        tick,
+        suppressionZones,
+        zoneCenters,
+      );
+      if (dozerBarrierLimit.hit) suppressionStats.dozer_barrier_hits += 1;
+      const effectiveContainmentLimitKm = Math.min(containmentLimitKm, dozerBarrierLimit.limitKm);
       const distanceKm = Math.max(
         0.02,
-        Number.isFinite(containmentLimitKm)
-          ? Math.min(uncappedDistanceKm, containmentLimitKm)
+        Number.isFinite(effectiveContainmentLimitKm)
+          ? Math.min(uncappedDistanceKm, effectiveContainmentLimitKm)
           : uncappedDistanceKm,
       );
       const bearing = growthKm <= 0.00001 && Number.isFinite(previousBearing)
@@ -181,7 +209,15 @@ class WildfireEngine {
     this._lastRawDistancesKm = nextRawDistances;
     this._lastPerimeterTick = tick;
 
-    const smoothedCoordinates = this._smoothPerimeterCoordinates(coordinates, suppressionZones, tick, zoneCenters);
+    let smoothedCoordinates = this._smoothPerimeterCoordinates(coordinates, suppressionZones, tick, zoneCenters);
+    smoothedCoordinates = this._enforceDozerBarriersOnRing(
+      smoothedCoordinates,
+      previousSectorPoints,
+      tick,
+      suppressionZones,
+      zoneCenters,
+      suppressionStats,
+    );
 
     // Close the polygon
     coordinates.length = 0;
@@ -209,6 +245,12 @@ class WildfireEngine {
         irregularity:      true,
         stateful_growth:   true,
         suppression_active: this._activeSuppressionZones(suppressionZones, tick).length > 0,
+        active_engine_count: this._activeSuppressionZones(suppressionZones, tick)
+          .filter(zone => zone.type !== 'dozer' && zone.resource_type !== 'dozer').length,
+        active_dozer_count: this._activeSuppressionZones(suppressionZones, tick)
+          .filter(zone => zone.type === 'dozer' || zone.resource_type === 'dozer').length,
+        dozer_barrier_hits: suppressionStats.dozer_barrier_hits,
+        engine_sector_hits: suppressionStats.engine_sector_hits,
       },
       geometry: {
         type: 'Polygon',
@@ -264,8 +306,20 @@ class WildfireEngine {
           suppressionZones,
           zoneCenters,
         );
-        if (Number.isFinite(containmentLimitKm) && containmentLimitKm < distanceKm) {
-          return this._pointAtBearingAndDistance(origin, bearing, containmentLimitKm);
+        const previousPoint = this._pointAtBearingAndDistance(origin, bearing, 0.02);
+        const dozerBarrierLimit = this._dozerBarrierLimitDistance(
+          previousPoint,
+          point,
+          0.02,
+          distanceKm,
+          tick,
+          suppressionZones,
+          zoneCenters,
+          origin,
+        );
+        const effectiveLimitKm = Math.min(containmentLimitKm, dozerBarrierLimit.limitKm);
+        if (Number.isFinite(effectiveLimitKm) && effectiveLimitKm < distanceKm) {
+          return this._pointAtBearingAndDistance(origin, bearing, effectiveLimitKm);
         }
         const damping = this._suppressionDamping(point, bearing, tick, suppressionZones, zoneCenters);
         if (damping >= 0.95) {
@@ -326,7 +380,7 @@ class WildfireEngine {
     const pulse = 0.5 + 0.5 * Math.sin(tick * 1.15 + this.seed * 0.002);
     const strengthA = this._angularFalloff(angleDeg, channelA, width) * pulse;
     const strengthB = this._angularFalloff(angleDeg, channelB, width * 0.8) * (1 - pulse * 0.45);
-    return Math.max(strengthA, strengthB) * 0.35;
+    return Math.max(strengthA, strengthB) * 0.14;
   }
 
   _angularFalloff(angleA, angleB, width) {
@@ -363,12 +417,98 @@ class WildfireEngine {
     return Math.max(0, 1 - suppression / holdThreshold);
   }
 
+  _dozerBarrierLimitDistance(
+    previousPoint,
+    proposedPoint,
+    previousDistanceKm,
+    proposedDistanceKm,
+    tick,
+    suppressionZones,
+    precomputedCenters,
+    origin = this.ignition,
+  ) {
+    if (!Array.isArray(previousPoint) || !Array.isArray(proposedPoint)) {
+      return { limitKm: Number.POSITIVE_INFINITY, hit: false };
+    }
+    if (!Number.isFinite(proposedDistanceKm) || proposedDistanceKm <= previousDistanceKm + 0.001) {
+      return { limitKm: Number.POSITIVE_INFINITY, hit: false };
+    }
+
+    let limitKm = Number.POSITIVE_INFINITY;
+    let hit = false;
+    let spreadSegment;
+    try {
+      spreadSegment = turf.lineString([previousPoint, proposedPoint]);
+    } catch (_) {
+      return { limitKm, hit };
+    }
+
+    for (let zi = 0; zi < suppressionZones.length; zi++) {
+      const zone = suppressionZones[zi];
+      if (zone.type !== 'dozer' && zone.resource_type !== 'dozer') continue;
+
+      const activeAfter = Number(zone.active_after_elapsed_hours ?? zone.created_elapsed_hours ?? 0);
+      const ageHours = tick - activeAfter;
+      if (ageHours <= 0) continue;
+      const rampHours = Math.max(0.02, Number(zone.ramp_hours) || 0.04);
+      const progress = this._smoothstep(Math.max(0, Math.min(1, ageHours / rampHours)));
+      if (progress < 0.02) continue;
+
+      const line = this._dozerLineFeature(zone);
+      if (line) {
+        try {
+          const intersections = turf.lineIntersect(spreadSegment, line);
+          if (intersections.features.length > 0) {
+            const stopBufferKm = Math.max(0.01, Math.min(0.04, Number(zone.barrier_width_km) || 0.02));
+            let best = Number.POSITIVE_INFINITY;
+            for (const feature of intersections.features) {
+              const coord = feature.geometry?.coordinates;
+              if (!Array.isArray(coord) || coord.length < 2) continue;
+              const distanceKm = this._distanceKm(origin, coord);
+              if (distanceKm >= previousDistanceKm - 0.02 && distanceKm < best) best = distanceKm;
+            }
+            if (Number.isFinite(best)) {
+              const candidate = Math.max(previousDistanceKm, best - stopBufferKm);
+              limitKm = Math.min(limitKm, candidate);
+              hit = true;
+              continue;
+            }
+          }
+        } catch (_) {}
+      }
+
+      const barrier = zone.barrier_geojson || zone.geojson;
+      if (!barrier) continue;
+      try {
+        const proposedInsideBarrier = this._pointInZone(proposedPoint, { geojson: barrier });
+        const segmentHitsBarrier = proposedInsideBarrier || turf.booleanIntersects(spreadSegment, barrier);
+        if (!segmentHitsBarrier) continue;
+
+        const center = precomputedCenters
+          ? precomputedCenters[zi]
+          : (Array.isArray(zone.center) ? zone.center : this._zoneCenter(zone));
+        if (!center) continue;
+        const centerDistanceKm = this._distanceKm(origin, center);
+        const stopBufferKm = Math.max(0.01, Math.min(0.08, Number(zone.barrier_width_km) || 0.04));
+        const candidate = Math.max(previousDistanceKm, centerDistanceKm - stopBufferKm);
+        if (candidate <= proposedDistanceKm + 0.02) {
+          limitKm = Math.min(limitKm, candidate);
+          hit = true;
+        }
+      } catch (_) {}
+    }
+
+    return { limitKm, hit };
+  }
+
   _containmentLimitDistance(bearingDeg, previousDistanceKm, rawDistanceKm, tick, suppressionZones, precomputedCenters) {
     let limit = Number.POSITIVE_INFINITY;
 
     for (let zi = 0; zi < suppressionZones.length; zi++) {
       const zone = suppressionZones[zi];
-      if (zone.type !== 'dozer' && zone.resource_type !== 'dozer') continue;
+      const isDozerZone = zone.type === 'dozer' || zone.resource_type === 'dozer';
+      if (!isDozerZone) continue;
+      if (this._dozerLineFeature(zone)) continue;
       const center = precomputedCenters
         ? precomputedCenters[zi]
         : (Array.isArray(zone.center) ? zone.center : this._zoneCenter(zone));
@@ -390,20 +530,20 @@ class WildfireEngine {
         : this._bearing(this.ignition, center);
       const sectorWidth = Number(zone.sector_degrees) || (zone.type === 'dozer' ? 55 : 80);
       const angularDistance = this._angularDistance(bearingDeg, zoneBearing);
-      const angularReach = zone.type === 'dozer' ? sectorWidth * 0.9 : sectorWidth * 0.55;
+      // Dozers: wide reach so fire cannot sneak around the sides of the line.
+      // Engines: narrower (they suppress a focused area, not a wide barrier).
+      const angularReach = zone.type === 'dozer' ? sectorWidth * 2.0 : sectorWidth * 0.55;
       if (angularDistance > angularReach) continue;
 
       const radiusKm = Math.max(0.1, Number(zone.radius_km) || (zone.type === 'dozer' ? 1.0 : 0.8));
       const centerDistanceKm = this._distanceKm(this.ignition, center);
-      const deltaRad = angularDistance * Math.PI / 180;
-      const projectedLineDistanceKm = centerDistanceKm * Math.cos(deltaRad);
+      // Use radial distance cap: the dozer holds all sectors within angular reach
+      // at the dozer's distance from ignition (simpler and more reliable than cosine projection).
+      const projectedLineDistanceKm = centerDistanceKm;
       if (!Number.isFinite(projectedLineDistanceKm)) continue;
       if (zone.type !== 'dozer' && projectedLineDistanceKm <= previousDistanceKm + 0.03) continue;
-      // Allow dozer line to apply even when fire is approaching; only skip if fire has
-      // significantly overtaken the line (0.5x radius behind), preventing stale lines
-      // from creating phantom containment far inside the burnt area.
       if (zone.type === 'dozer' && projectedLineDistanceKm < previousDistanceKm - radiusKm * 0.5) continue;
-      if (projectedLineDistanceKm > rawDistanceKm + radiusKm * 0.65) continue;
+      if (projectedLineDistanceKm > rawDistanceKm + radiusKm * 1.2) continue;
 
       const zoneFactor = Number(zone.factor);
       const factor = Number.isFinite(zoneFactor) ? zoneFactor : (zone.type === 'dozer' ? 0.88 : 0.52);
@@ -417,13 +557,10 @@ class WildfireEngine {
         : Math.max(0.03, 0.12 * (1 - holdingPower));
       const candidate = projectedLineDistanceKm - bufferBehindLine;
       
-      if (zone.type === 'dozer') {
-        // Enforce hard cap for dozers, pulling it back if smoothing pushed it forward.
-        limit = Math.min(limit, candidate);
-      } else {
-        // Never pull the perimeter backward — only prevent future growth past the line.
-        limit = Math.min(limit, Math.max(previousDistanceKm, candidate));
-      }
+      // Never pull existing fire backward — only block future growth past the line.
+      // Fire that has already crossed the dozer line stays where it is; the line
+      // prevents further spread from that point onward.
+      limit = Math.min(limit, Math.max(previousDistanceKm, candidate));
     }
 
     return limit;
@@ -480,6 +617,44 @@ class WildfireEngine {
     }
 
     return smoothed;
+  }
+
+  _enforceDozerBarriersOnRing(coordinates, previousSectorPoints, tick, suppressionZones, zoneCenters, stats = null) {
+    if (!Array.isArray(coordinates) || coordinates.length < 3) return coordinates;
+    const corrected = [];
+
+    for (let i = 0; i < coordinates.length; i++) {
+      const proposedPoint = coordinates[i];
+      if (!Array.isArray(proposedPoint) || proposedPoint.length < 2) {
+        corrected.push(proposedPoint);
+        continue;
+      }
+
+      const bearing = this._bearing(this.ignition, proposedPoint);
+      const proposedDistanceKm = this._distanceKm(this.ignition, proposedPoint);
+      const previousPoint = Array.isArray(previousSectorPoints?.[i])
+        ? previousSectorPoints[i]
+        : this._pointAtBearingAndDistance(this.ignition, bearing, 0.02);
+      const previousDistanceKm = this._distanceKm(this.ignition, previousPoint);
+      const barrierLimit = this._dozerBarrierLimitDistance(
+        previousPoint,
+        proposedPoint,
+        previousDistanceKm,
+        proposedDistanceKm,
+        tick,
+        suppressionZones,
+        zoneCenters,
+      );
+
+      if (barrierLimit.hit && Number.isFinite(barrierLimit.limitKm) && barrierLimit.limitKm < proposedDistanceKm) {
+        if (stats) stats.dozer_barrier_hits += 1;
+        corrected.push(this._pointAtBearingAndDistance(this.ignition, bearing, barrierLimit.limitKm));
+      } else {
+        corrected.push(proposedPoint);
+      }
+    }
+
+    return corrected;
   }
 
   _dozerCutInfluence(bearingDeg, tick, suppressionZones, precomputedCenters) {
@@ -556,34 +731,44 @@ class WildfireEngine {
       if (ageHours <= 0) continue;
 
       const radiusKm = Math.max(0.1, Number(zone.radius_km) || 0.8);
-      const distanceKm = this._distanceKm(point, center);
-      if (distanceKm > radiusKm) continue;
+      const insideEngineZone = this._pointInZone(point, zone);
+
+      let angularFalloff = 1;
+      let distanceFalloff = 1;
+      if (!insideEngineZone) {
+        // Angular check first — engine must be in the right direction from ignition
+        const zoneBearing = Number.isFinite(Number(zone.bearing_deg))
+          ? Number(zone.bearing_deg)
+          : this._bearing(this.ignition, center);
+        const sectorWidth = Number(zone.sector_degrees) || 80;
+        const angularDist = this._angularDistance(angleDeg, zoneBearing);
+        if (angularDist >= sectorWidth) continue;
+        angularFalloff = 1 - angularDist / sectorWidth;
+
+        // Radial distance check: compare engine's distance from ignition to the fire
+        // edge's distance from ignition along this sector. This stays valid as the
+        // fire grows — unlike a point-to-point check that fails once fire passes the engine.
+        const engineDistFromIgnition = this._distanceKm(this.ignition, center);
+        const fireEdgeDistFromIgnition = this._distanceKm(this.ignition, point);
+        const radialDiff = Math.abs(engineDistFromIgnition - fireEdgeDistFromIgnition);
+        const effectRadiusKm = radiusKm * 2.0;
+        if (radialDiff > effectRadiusKm) continue;
+        distanceFalloff = Math.pow(Math.max(0, 1 - radialDiff / effectRadiusKm), 0.5);
+      }
 
       const rampHours = Math.max(0.02, Number(zone.ramp_hours) || 0.12);
       const progress = this._smoothstep(Math.max(0, Math.min(1, ageHours / rampHours)));
       if (progress < 0.05) continue;
 
-      // Gentler distance falloff so engines still suppress even when slightly offset from edge
-      const distanceFalloff = Math.pow(1 - distanceKm / radiusKm, 0.6);
-
-      const zoneBearing = Number.isFinite(Number(zone.bearing_deg))
-        ? Number(zone.bearing_deg)
-        : this._bearing(this.ignition, center);
-      const sectorWidth = Number(zone.sector_degrees) || 80;
-      const angularFalloff = Math.max(0, 1 - this._angularDistance(angleDeg, zoneBearing) / sectorWidth);
-      if (angularFalloff <= 0) continue;
-
       const zoneFactor = Number(zone.factor);
       const factor = Number.isFinite(zoneFactor) ? zoneFactor : 0.88;
 
-      // Per-tick pullback per engine group: 0.006 km base.
-      // Engines at the fire edge directly remove ~6m of fire radius per 500ms tick,
-      // scaling with zone factor (count-dependent) and proximity.
-      totalPullback += 0.006 * factor * progress * distanceFalloff * angularFalloff;
+      // Per-tick pullback per engine group: 0.022 km base (~22m radius per 500ms tick).
+      totalPullback += 0.022 * factor * progress * distanceFalloff * angularFalloff;
     }
 
-    // Cap total pullback per sector per tick so fire doesn't collapse instantly
-    return Math.min(0.08, totalPullback);
+    // Cap per sector per tick — strong enough to visibly shrink fire, not instant collapse
+    return Math.min(0.25, totalPullback);
   }
 
   _shoelaceAcres(coords) {
@@ -614,35 +799,51 @@ class WildfireEngine {
       if (ageHours <= 0) continue;
 
       const radiusKm = Math.max(0.1, Number(zone.radius_km) || (zone.type === 'dozer' ? 1.0 : 0.8));
-      const distanceKm = this._distanceKm(point, center);
-      if (distanceKm > radiusKm) continue;
+      const isDozerZone = zone.type === 'dozer' || zone.resource_type === 'dozer';
 
-      // Use the zone's own ramp_hours (set from resourceModel capabilities).
-      const rampHours = Math.max(0.02, Number(zone.ramp_hours) || (zone.type === 'dozer' ? 0.04 : 0.12));
-      const progress = this._smoothstep(Math.max(0, Math.min(1, ageHours / rampHours)));
-      const distanceFalloff = Math.pow(1 - distanceKm / radiusKm, zone.type === 'dozer' ? 0.8 : 1.35);
       const zoneBearing = Number.isFinite(Number(zone.bearing_deg))
         ? Number(zone.bearing_deg)
         : this._bearing(this.ignition, center);
-      const sectorWidth = Number(zone.sector_degrees) || (zone.type === 'dozer' ? 55 : 80);
+      const sectorWidth = Number(zone.sector_degrees) || (isDozerZone ? 55 : 80);
       const angularFalloff = Math.max(0, 1 - this._angularDistance(angleDeg, zoneBearing) / sectorWidth);
+
+      let distanceFalloff;
+      if (isDozerZone) {
+        // Dozers: standard point-to-point check (they create a local barrier)
+        const distanceKm = this._distanceKm(point, center);
+        if (distanceKm > radiusKm) continue;
+        distanceFalloff = Math.pow(1 - distanceKm / radiusKm, 0.8);
+      } else if (this._pointInZone(point, zone)) {
+        distanceFalloff = 1;
+      } else {
+        // Engines: radial check so damping stays valid as fire grows past engine position
+        const engineDistFromIgnition = this._distanceKm(this.ignition, center);
+        const fireEdgeDist = this._distanceKm(this.ignition, point);
+        const radialDiff = Math.abs(engineDistFromIgnition - fireEdgeDist);
+        const effectRadiusKm = radiusKm * 2.0;
+        if (radialDiff > effectRadiusKm) continue;
+        distanceFalloff = Math.pow(Math.max(0, 1 - radialDiff / effectRadiusKm), 0.8);
+      }
+
+      // Use the zone's own ramp_hours (set from resourceModel capabilities).
+      const rampHours = Math.max(0.02, Number(zone.ramp_hours) || (isDozerZone ? 0.04 : 0.12));
+      const progress = this._smoothstep(Math.max(0, Math.min(1, ageHours / rampHours)));
 
       // Dozers are CONTAINMENT tools — their hard-cap (_containmentLimitDistance) is their
       // primary fire-stopping mechanism.  Their suppression-damping contribution is intentionally
       // weak so that accumulated dozer zones don't cause the fire to shrink backward.
       // Engines are SUPPRESSION tools — high damping factor so overlapping engine groups
       // gradually extinguish fire and can push combined suppression past the shrink threshold.
-      const isDozer = zone.type === 'dozer';
-      const profile = isDozer
+      const profile = isDozerZone
         ? distanceFalloff * Math.pow(angularFalloff, 0.55)
         : distanceFalloff * (0.78 + angularFalloff * 0.22);
 
       const zoneFactor = Number(zone.factor);
       // Dozers contribute at only 35% of their stated factor for suppression damping.
-      const suppressionFactor = isDozer
+      const suppressionFactor = isDozerZone
         ? (Number.isFinite(zoneFactor) ? zoneFactor * 0.35 : 0.30)
         : (Number.isFinite(zoneFactor) ? zoneFactor : 0.90);
-      const perZoneCap = isDozer ? 0.35 : 0.90;
+      const perZoneCap = isDozerZone ? 0.35 : 0.90;
       const damping = Math.max(0, Math.min(perZoneCap, suppressionFactor * progress * profile));
       openFraction *= (1 - damping);
     }
@@ -658,6 +859,37 @@ class WildfireEngine {
     } catch (_) {
       return null;
     }
+  }
+
+  _dozerLineFeature(zone) {
+    const candidates = [zone.line_geojson, zone.visual_geojson, zone.geojson];
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      if (candidate.type === 'Feature' && candidate.geometry?.type === 'LineString') return candidate;
+      if (candidate.type === 'LineString') {
+        return { type: 'Feature', properties: {}, geometry: candidate };
+      }
+    }
+    return null;
+  }
+
+  _pointInZone(point, zone) {
+    if (!Array.isArray(point) || point.length < 2 || !zone?.geojson) return false;
+    try {
+      const pointFeature = turf.point(point);
+      const geojson = zone.geojson;
+      if (geojson.type === 'FeatureCollection') {
+        return geojson.features.some(feature => this._pointInZone(point, { geojson: feature }));
+      }
+      if (geojson.type === 'Feature') {
+        if (geojson.geometry?.type !== 'Polygon' && geojson.geometry?.type !== 'MultiPolygon') return false;
+        return turf.booleanPointInPolygon(pointFeature, geojson);
+      }
+      if (geojson.type === 'Polygon' || geojson.type === 'MultiPolygon') {
+        return turf.booleanPointInPolygon(pointFeature, { type: 'Feature', properties: {}, geometry: geojson });
+      }
+    } catch (_) {}
+    return false;
   }
 
   _smoothstep(t) {
