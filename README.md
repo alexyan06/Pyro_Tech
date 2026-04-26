@@ -81,19 +81,13 @@ PyroTech uses a "merged geospatial state" model:
 <!-- Add images and demo media below -->
 
 ### Setup & Scenario Configuration
-<!-- ![Setup screen](docs/images/setup.png) -->
+<img width="242" height="161" alt="image" src="https://github.com/user-attachments/assets/cebd70aa-21f1-4b0a-a3b3-2eb6d061bdf0" />
+
 
 ### Live Incident Dashboard
-<!-- ![Dashboard](docs/images/dashboard.png) -->
+<img width="242" height="161" alt="image" src="https://github.com/user-attachments/assets/a7c3ffb5-c8bb-4f9a-9725-2a929c5f1418" />
 
-### Multi-Agent Radio Net
-<!-- ![Agent feed](docs/images/agent-feed.png) -->
+### Playbook Interactions
+<img width="242" height="161" alt="image" src="https://github.com/user-attachments/assets/ad5ab5f3-7080-4650-804a-1b1759c35f96" />
+<img width="242" height="161" alt="image" src="https://github.com/user-attachments/assets/e8211f06-9b5e-4132-9890-24a8990d35e7" />
 
-### Fire Spread & Suppression
-<!-- ![Fire perimeter with dozer barriers](docs/images/suppression.png) -->
-
-### What-If Branching
-<!-- ![Branch comparison](docs/images/branching.png) -->
-
-### Demo Video
-<!-- [![Demo video](docs/images/demo-thumb.png)](https://your-demo-link) -->
