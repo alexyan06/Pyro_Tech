@@ -163,7 +163,18 @@ export default function LoadingScreen() {
       }} />
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', position: 'relative' }}>
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', position: 'relative' }}>
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '420px',
+            height: '200px',
+            background: 'radial-gradient(ellipse at center, oklch(50% 0.25 20 / 0.28) 0%, oklch(40% 0.22 18 / 0.12) 45%, transparent 70%)',
+            pointerEvents: 'none',
+            zIndex: 0,
+          }} />
           <div style={{
             fontFamily: 'var(--font-condensed)',
             fontSize: 'clamp(3rem, 8vw, 5.5rem)',
@@ -171,8 +182,10 @@ export default function LoadingScreen() {
             letterSpacing: '0.18em',
             textTransform: 'uppercase',
             color: 'var(--accent-orange)',
-            textShadow: '0 0 40px oklch(60% 0.22 40 / 0.6), 0 0 80px oklch(50% 0.2 30 / 0.3)',
+            textShadow: '0 0 40px oklch(55% 0.25 18 / 0.4), 0 0 80px oklch(45% 0.22 18 / 0.2)',
             lineHeight: 1,
+            position: 'relative',
+            zIndex: 1,
           }}>
             PYROTECH
           </div>

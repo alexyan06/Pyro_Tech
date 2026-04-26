@@ -156,14 +156,14 @@ export default function SetupPage() {
   return (
     <div className="sp-root">
       <div className="sp-scan" aria-hidden="true" />
-      {/* Fire glow at bottom */}
+      {/* Subtle warm glow at bottom edge */}
       <div aria-hidden="true" style={{
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: '200px',
-        background: 'radial-gradient(ellipse 80% 100% at 50% 100%, oklch(40% 0.2 30 / 0.25) 0%, transparent 70%)',
+        height: '180px',
+        background: 'radial-gradient(ellipse 80% 100% at 50% 100%, oklch(65% 0.22 25 / 0.14) 0%, oklch(55% 0.20 25 / 0.05) 45%, transparent 70%)',
         pointerEvents: 'none',
       }} />
       {/* Ember particles */}
@@ -484,7 +484,27 @@ export default function SetupPage() {
           line-height: 0.88;
           margin: 0 0 1.1rem;
           color: var(--accent);
-          text-shadow: 0 0 80px oklch(68% 0.18 45 / 0.22);
+          text-shadow: 0 0 60px oklch(55% 0.25 18 / 0.4), 0 0 120px oklch(45% 0.22 18 / 0.2);
+          position: relative;
+          display: inline-block;
+          isolation: isolate;
+        }
+        .sp-title::before {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 600px;
+          height: 280px;
+          background: radial-gradient(
+            ellipse at center,
+            oklch(50% 0.25 20 / 0.28) 0%,
+            oklch(40% 0.22 18 / 0.12) 45%,
+            transparent 70%
+          );
+          pointer-events: none;
+          z-index: -1;
         }
 
         .sp-desc {
