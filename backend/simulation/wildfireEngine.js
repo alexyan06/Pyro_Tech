@@ -1,5 +1,14 @@
 const turf = require('@turf/turf');
 
+function statsPointChanged(a, b) {
+  return Array.isArray(a) &&
+    Array.isArray(b) &&
+    a.length >= 2 &&
+    b.length >= 2 &&
+    (Math.abs(Number(a[0]) - Number(b[0])) > 1e-7 ||
+      Math.abs(Number(a[1]) - Number(b[1])) > 1e-7);
+}
+
 /**
  * wildfireEngine.js
  *
@@ -204,11 +213,6 @@ class WildfireEngine {
       coordinates.push(this._pointAtBearingAndDistance(this.ignition, bearing, distanceKm));
     }
 
-    this._sectorDistancesKm = nextSectorDistances;
-    this._sectorBearingsDeg = nextSectorBearings;
-    this._lastRawDistancesKm = nextRawDistances;
-    this._lastPerimeterTick = tick;
-
     let smoothedCoordinates = this._smoothPerimeterCoordinates(coordinates, suppressionZones, tick, zoneCenters);
     smoothedCoordinates = this._enforceDozerBarriersOnRing(
       smoothedCoordinates,
@@ -218,6 +222,22 @@ class WildfireEngine {
       zoneCenters,
       suppressionStats,
     );
+    smoothedCoordinates = smoothedCoordinates.map((point) => {
+      const corrected = this._applyDozerHardStop(point, tick, suppressionZones, zoneCenters);
+      if (statsPointChanged(point, corrected)) suppressionStats.dozer_barrier_hits += 1;
+      return corrected;
+    });
+
+    for (let i = 0; i < smoothedCoordinates.length; i++) {
+      const point = smoothedCoordinates[i];
+      if (!Array.isArray(point) || point.length < 2) continue;
+      nextSectorDistances[i] = Math.max(0.02, this._distanceKm(this.ignition, point));
+      nextSectorBearings[i] = this._bearing(this.ignition, point);
+    }
+    this._sectorDistancesKm = nextSectorDistances;
+    this._sectorBearingsDeg = nextSectorBearings;
+    this._lastRawDistancesKm = nextRawDistances;
+    this._lastPerimeterTick = tick;
 
     // Close the polygon
     coordinates.length = 0;
@@ -655,10 +675,70 @@ class WildfireEngine {
 
       if (barrierLimit.hit && Number.isFinite(barrierLimit.limitKm) && barrierLimit.limitKm < proposedDistanceKm) {
         if (stats) stats.dozer_barrier_hits += 1;
-        corrected.push(this._pointAtBearingAndDistance(this.ignition, bearing, barrierLimit.limitKm));
+        corrected.push(this._applyDozerHardStop(
+          this._pointAtBearingAndDistance(this.ignition, bearing, barrierLimit.limitKm),
+          tick,
+          suppressionZones,
+          zoneCenters,
+        ));
       } else {
-        corrected.push(proposedPoint);
+        const hardStopped = this._applyDozerHardStop(proposedPoint, tick, suppressionZones, zoneCenters);
+        if (stats && statsPointChanged(proposedPoint, hardStopped)) stats.dozer_barrier_hits += 1;
+        corrected.push(hardStopped);
       }
+    }
+
+    return corrected;
+  }
+
+  _applyDozerHardStop(point, tick, suppressionZones, precomputedCenters) {
+    if (!Array.isArray(point) || point.length < 2) return point;
+    let corrected = point;
+
+    for (let zi = 0; zi < suppressionZones.length; zi++) {
+      const zone = suppressionZones[zi];
+      if (zone.type !== 'dozer' && zone.resource_type !== 'dozer') continue;
+      const activeAfter = Number(zone.active_after_elapsed_hours ?? zone.created_elapsed_hours ?? 0);
+      const ageHours = tick - activeAfter;
+      if (ageHours <= 0) continue;
+      const rampHours = Math.max(0.02, Number(zone.ramp_hours) || 0.04);
+      const progress = this._smoothstep(Math.max(0, Math.min(1, ageHours / rampHours)));
+      if (progress < 0.02) continue;
+
+      const line = this._dozerLineFeature(zone);
+      const coords = line?.geometry?.coordinates;
+      if (!Array.isArray(coords) || coords.length < 2) continue;
+      const start = coords[0];
+      const end = coords[coords.length - 1];
+      if (!Array.isArray(start) || !Array.isArray(end)) continue;
+
+      const lineCenter = precomputedCenters?.[zi] ||
+        (Array.isArray(zone.center) ? zone.center : [
+          (Number(start[0]) + Number(end[0])) / 2,
+          (Number(start[1]) + Number(end[1])) / 2,
+        ]);
+      if (!Array.isArray(lineCenter)) continue;
+
+      const bearing = Number.isFinite(Number(zone.bearing_deg))
+        ? Number(zone.bearing_deg)
+        : this._bearing(this.ignition, lineCenter);
+      const lateralBearing = (bearing + 90) % 360;
+      const lineLengthKm = Math.max(0.05, this._distanceKm(start, end));
+      const lateralReachKm = (lineLengthKm / 2) + Math.max(0.8, lineLengthKm * 0.45);
+      const vec = this._localKmVector(lineCenter, corrected);
+      const alongKm = this._dotBearing(vec, bearing);
+      const lateralKm = this._dotBearing(vec, lateralBearing);
+
+      if (Math.abs(lateralKm) > lateralReachKm || alongKm <= 0) continue;
+
+      const clampedLateral = Math.max(-lineLengthKm / 2, Math.min(lineLengthKm / 2, lateralKm));
+      const stopBufferKm = Math.max(0.015, Math.min(0.08, Number(zone.barrier_width_km) || 0.04));
+      const linePoint = this._pointAtBearingAndDistance(
+        lineCenter,
+        clampedLateral >= 0 ? lateralBearing : (lateralBearing + 180) % 360,
+        Math.abs(clampedLateral),
+      );
+      corrected = this._pointAtBearingAndDistance(linePoint, (bearing + 180) % 360, stopBufferKm);
     }
 
     return corrected;
@@ -926,6 +1006,19 @@ class WildfireEngine {
     const h = Math.sin(dLat / 2) ** 2 +
       Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
     return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  }
+
+  _localKmVector(origin, point) {
+    const lat = ((origin[1] + point[1]) / 2) * Math.PI / 180;
+    return {
+      east: (point[0] - origin[0]) * 111.32 * Math.cos(lat),
+      north: (point[1] - origin[1]) * 111.32,
+    };
+  }
+
+  _dotBearing(vector, bearingDeg) {
+    const rad = bearingDeg * Math.PI / 180;
+    return vector.east * Math.sin(rad) + vector.north * Math.cos(rad);
   }
 
   _pullToward(point, target, amount) {

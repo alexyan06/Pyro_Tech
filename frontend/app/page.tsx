@@ -124,12 +124,12 @@ export default function SetupPage() {
     setPhase('setup');
     try {
       const windSpeedMph = Number.parseFloat(form.windSpeed);
-      const windFromDeg = Number.parseFloat(form.windDirection);
-      // Convert UI (mph + FROM degrees) to U/V components (m/s) for unambiguous backend storage
+      const windTowardDeg = Number.parseFloat(form.windDirection);
+      // Convert UI (mph + TO degrees) to U/V components (m/s) for unambiguous backend storage.
       const _speedMs = (Number.isFinite(windSpeedMph) ? windSpeedMph : 35) * 0.44704;
-      const _rad = (Number.isFinite(windFromDeg) ? windFromDeg : 45) * Math.PI / 180;
-      const windU = parseFloat((-_speedMs * Math.sin(_rad)).toFixed(4));
-      const windV = parseFloat((-_speedMs * Math.cos(_rad)).toFixed(4));
+      const _rad = (Number.isFinite(windTowardDeg) ? windTowardDeg : 45) * Math.PI / 180;
+      const windU = parseFloat((_speedMs * Math.sin(_rad)).toFixed(4));
+      const windV = parseFloat((_speedMs * Math.cos(_rad)).toFixed(4));
       const initialAcres = clampNumber(form.acres, 0, 10000, 10);
       const res = await fetch(`${API_BASE}/api/setup-scenario`, {
         method: 'POST',
@@ -338,7 +338,7 @@ export default function SetupPage() {
 
               <div className="sp-field">
                 <div className="sp-slider-header">
-                  <label className="sp-fl" htmlFor="windDir">Wind Direction</label>
+                  <label className="sp-fl" htmlFor="windDir">Spread Direction</label>
                   <div className="sp-bearing">
                     <input
                       type="number"
@@ -359,7 +359,7 @@ export default function SetupPage() {
                   value={form.windDirection}
                   onChange={(e) => update('windDirection', e.target.value)}
                 />
-                <span className="sp-hint">0° = N · 90° = E · 180° = S · 270° = W</span>
+                <span className="sp-hint">Direction the fire is pushed toward: 0° = N · 90° = E · 180° = S · 270° = W</span>
               </div>
 
               <div className="sp-field">
