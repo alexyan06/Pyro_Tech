@@ -14,6 +14,14 @@ const AGENT_VOICES = {
  * Synthesize text to speech for a given agent.
  * Returns a Buffer of MP3 audio, or null if synthesis fails / key not set.
  */
+function stripMetadata(text) {
+  // Remove ```json ... ``` code fences (map event payloads the AI embeds after its prose).
+  return text
+    .replace(/```json[\s\S]*?```/g, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .trim();
+}
+
 async function synthesize(agentName, text) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey || apiKey === 'your_elevenlabs_key_here') {
@@ -22,10 +30,13 @@ async function synthesize(agentName, text) {
 
   const voiceId = AGENT_VOICES[agentName] || AGENT_VOICES.synthesis;
 
-  // Trim text to avoid excessive synthesis costs (max 500 chars)
-  const trimmedText = text.length > 500
-    ? text.slice(0, 497) + '...'
-    : text;
+  const prose = stripMetadata(text);
+  if (!prose) return null;
+
+  // Trim to avoid excessive synthesis costs (max 500 chars)
+  const trimmedText = prose.length > 500
+    ? prose.slice(0, 497) + '...'
+    : prose;
 
   const body = JSON.stringify({
     text: trimmedText,

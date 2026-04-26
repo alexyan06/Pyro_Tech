@@ -96,6 +96,8 @@ class TurnSequencer {
     const durationHours = normalizeDurationHours(scenarioInput.durationHours);
     const totalCycles = Math.ceil(durationHours * 60 / LOGICAL_MINUTES_PER_CYCLE);
     scenarioInput.durationHours = durationHours;
+    this.ttsMode = opts.enableTts === true;
+    this._audioWaiters = new Map();
     this.stateManager.reset();
     this.paused = false;
     this.stopped = false;
@@ -451,15 +453,29 @@ class TurnSequencer {
       elapsed_hours: elapsedHours,
     });
 
-    // Fire-and-forget voice synthesis (non-blocking)
-    synthesize(agent.name, fullText).then(audioBuffer => {
-      if (audioBuffer) {
+    if (this.ttsMode) {
+      // Sequential TTS: synthesize, send, then await client ack before returning.
+      // If synthesis fails (null buffer), skip the wait so the sim never deadlocks.
+      let audioBuffer = null;
+      try { audioBuffer = await synthesize(agent.name, fullText); } catch { /* optional */ }
+      if (audioBuffer && !this.stopped) {
+        // Register waiter BEFORE sending so a fast audio_done ack never races past it.
+        const key = `${agent.name}:${tick}`;
+        const ackPromise = new Promise((resolve) => {
+          const timer = setTimeout(() => {
+            this._audioWaiters.delete(key);
+            console.warn(`[TTS] audio_done timeout for ${key}`);
+            resolve();
+          }, 30000);
+          this._audioWaiters.set(key, { resolve, timer });
+        });
         this.sendToClient(ws, {
           type: 'agent_audio',
           payload: { agent: agent.name, audio_base64: audioBuffer.toString('base64'), tick },
         });
+        await ackPromise;
       }
-    }).catch(() => { }); // voice is optional, swallow errors
+    }
 
     return { agent: agent.name, text: fullText, mapEvents };
   }
@@ -934,7 +950,28 @@ class TurnSequencer {
     }
     this.paused = false;
   }
-  stop() { this.stopped = true; }
+  stop() {
+    this.stopped = true;
+    // Unblock any pending audio ack waiters so the sim loop can exit cleanly.
+    if (this._audioWaiters) {
+      for (const { resolve, timer } of this._audioWaiters.values()) {
+        clearTimeout(timer);
+        resolve();
+      }
+      this._audioWaiters.clear();
+    }
+  }
+
+  _resolveAudioAck(agent, tick) {
+    if (!this._audioWaiters) return;
+    const key = `${agent}:${tick}`;
+    const waiter = this._audioWaiters.get(key);
+    if (waiter) {
+      clearTimeout(waiter.timer);
+      this._audioWaiters.delete(key);
+      waiter.resolve();
+    }
+  }
 
   /**
    * Run a "what-if" branch simulation.

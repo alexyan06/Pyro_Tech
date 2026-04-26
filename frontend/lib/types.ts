@@ -25,6 +25,8 @@ export interface ScenarioInput {
   historical_mode?: boolean;
   /** Simulated incident duration in hours. Defaults to 6 for legacy scenarios. */
   durationHours?: number;
+  /** If true, each agent waits for the previous agent's TTS audio to finish before starting. */
+  enableTts?: boolean;
 }
 
 // Trip waypoint for Deck.gl TripsLayer animation
